@@ -1,0 +1,59 @@
+
+#ifndef __MM_DISPLAY_DRIVER_CONFIG_H
+#define __MM_DISPLAY_DRIVER_CONFIG_H
+
+#include "sdkconfig.h"
+
+#define MM_PORT_LCD_H_RES CONFIG_MM_PORT_LCD_H_RES
+#define MM_PORT_LCD_V_RES CONFIG_MM_PORT_LCD_V_RES
+
+#include "mm_port_rotation_redefine.h"
+
+#define MM_PORT_LCD_OFFSET_X 34
+#define MM_PORT_LCD_OFFSET_Y 0
+#define MM_PORT_LCD_MIRROR_X 0
+#define MM_PORT_LCD_MIRROR_Y 0
+#define MM_PORT_LCD_SWAP_XY  0
+#define MM_PORT_LCD_INVERT_COLOR 1
+
+#define MM_PORT_LCD_INTERFACE_SPI 1
+
+#define MM_PORT_LCD_GPIO_BL     22
+#define MM_PORT_LCD_GPIO_DC     15
+#define MM_PORT_LCD_GPIO_CS     14
+#define MM_PORT_LCD_GPIO_RST    21
+#define MM_PORT_LCD_GPIO_SCLK   7
+#define MM_PORT_LCD_GPIO_MOSI   6
+
+#define MM_PORT_LCD_BL_ON_LEVEL      1
+#define MM_PORT_LCD_DRAW_BUFF_DOUBLE 1
+#define MM_PORT_LCD_DRAW_BUFF_HEIGHT 80
+#define MM_PORT_LCD_BUFF_DMA         0
+#define MM_PORT_LCD_BUFF_IN_SPIRAM   0
+
+#define MM_PORT_LCD_CMD_BITS         8
+#define MM_PORT_LCD_PARAM_BITS       8
+#define MM_PORT_LCD_BITS_PER_PIXEL   16
+#define MM_PORT_LCD_PIXEL_CLOCK_HZ   12 * 1000 * 1000
+#define MM_PORT_LCD_SPI_MODE         0
+#define MM_PORT_LCD_SPI_NUM          2
+#define MM_PORT_LCD_SPI_TRANS_QUEUE  10
+
+#define MM_PORT_LCD_DATA_LITTLE_ENDIAN 1
+#define MM_PORT_LCD_RGB_LITTLE_ENDIAN  1
+
+// #define MM_PORT_LEDC_HS_TIMER    0
+// #define MM_PORT_LEDC_HS_CHANNEL  0
+
+/* SD card config */
+
+#define MM_PORT_SDCARD_INTERFACE_MMC      1
+
+#define MM_PORT_SDCARD_PIN_CMD  15
+#define MM_PORT_SDCARD_PIN_CLK  16
+#define MM_PORT_SDCARD_PIN_D0   17
+#define MM_PORT_SDCARD_PIN_D1   18
+#define MM_PORT_SDCARD_PIN_D2   13
+#define MM_PORT_SDCARD_PIN_D3   14
+
+#endif /* __MM_DISPLAY_DRIVER_CONFIG_H */

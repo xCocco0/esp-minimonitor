@@ -1,0 +1,15 @@
+menu "Generic board configuration"
+    
+    menu "LCD configuration"
+
+        orsource "Kconfig.lcd"
+
+    endmenu
+
+    menu "UI configuration"
+
+        orsource "Kconfig.ui"
+
+    endmenu
+
+endmenu

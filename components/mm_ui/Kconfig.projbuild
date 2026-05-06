@@ -1,0 +1,73 @@
+menu "Minimonitor - GUI"
+
+    config MM_UI_ANIMATED
+        bool "Enable UI animations"
+        default y
+        help
+            Enable smooth transitions and animated elements within the interface.
+
+    config MM_UI_ANIM_SPEED
+        int "Animation speed"
+        default 100
+        depends on MM_UI_ANIMATED
+        help
+            The global speed factor for UI animations. Higher is faster. Write 100 for default length.
+
+    config MM_UI_ZOOM_IMAGE
+        bool "Enable image zooming"
+        default y
+        help
+            Allow the UI to scale or zoom images for better visibility.
+
+    config MM_UI_USE_CALENDAR
+        bool "Enable calendar widget"
+        default n
+        help
+            Include the calendar widget to the UI.
+            
+    choice MM_UI_NOTIF_COUNT_LABEL_LIMIT
+        prompt "Maximum number for notification icon label" if MM_EXPERT
+        default MM_UI_NOTIF_COUNT_LABEL_LIMIT_100
+        help
+            The maximum number to use for the small label near the notification icon. After this value has been reached.
+            notifications are still received but the label will show a + and stop counting.
+
+        config MM_UI_NOTIF_COUNT_LABEL_LIMIT_10
+            bool "10"
+        config MM_UI_NOTIF_COUNT_LABEL_LIMIT_100
+            bool "100"
+
+    endchoice
+
+    config MM_UI_BTN_SNOOZE_COLOR
+        hex "Snooze button color"
+        default 0xE85D75
+
+    config MM_UI_BTN_SHUTDOWN_COLOR
+        hex "Shutdown button color"
+        default 0xFB5012
+
+    config MM_UI_BTN_REBOOT_COLOR
+        hex "Reboot button color"
+        default 0x51A23F
+
+    config MM_UI_BTN_ENABLENOTIF_COLOR
+        hex "Enable notifications button color"
+        default 0x388fa4
+
+    config MM_UI_BTN_ROTATION_COLOR
+        hex "Rotation button color"
+        default 0xB4B84B
+
+    config MM_UI_BTN_DISABLED_COLOR
+        hex "Disabled state button color"
+        default 0x404040
+
+    config MM_UI_LOG_LEVEL
+        int "Maximum log level"
+        range 0 6
+        default 4
+        help
+            Maximum log level for this component
+        
+endmenu

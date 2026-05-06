@@ -1,0 +1,253 @@
+menu "Minimonitor - Additional GPIO devices"
+    
+    menu "Physical buttons"
+
+        config MM_IO_PHYSICAL_BUTTONS
+            int "Number of physical buttons"
+            range 0 3
+            default 0
+            help
+                Set the number of physical buttons available on the board.
+
+        config MM_IO_LONG_PRESS_TIME_MS
+            int "Long press time (ms)"
+            default 500
+            help
+                Amount of time to press a button to trigger a long press action.
+
+        # --- BUTTON 1 ---
+        menu "Button 1 Settings"
+            depends on MM_IO_PHYSICAL_BUTTONS >= 1
+
+            config MM_IO_BTN1_GPIO
+                int "GPIO pin"
+                default 0
+
+            choice MM_IO_BTN1_SINGLE_ACTION
+                prompt "Single Press Action"
+                default MM_IO_BTN1_SINGLE_NONE
+                config MM_IO_BTN1_SINGLE_NONE
+                    bool "Disabled"
+                config MM_IO_BTN1_SINGLE_SNOOZE
+                    bool "Snooze"
+                config MM_IO_BTN1_SINGLE_LEFT
+                    bool "Left Swipe"
+                config MM_IO_BTN1_SINGLE_RIGHT
+                    bool "Right Swipe"
+                config MM_IO_BTN1_SINGLE_CYCLE
+                    bool "Left/Right Swipe (cyclic)"
+                config MM_IO_BTN1_SINGLE_HOME
+                    bool "Return to home screen"
+            endchoice
+
+            choice MM_IO_BTN1_LONG_ACTION
+                prompt "Long Press Action"
+                default MM_IO_BTN1_LONG_NONE
+                config MM_IO_BTN1_LONG_NONE
+                    bool "Disabled"
+                config MM_IO_BTN1_LONG_SNOOZE
+                    bool "Snooze"
+                config MM_IO_BTN1_LONG_LEFT
+                    bool "Left Swipe"
+                config MM_IO_BTN1_LONG_RIGHT
+                    bool "Right Swipe"
+                config MM_IO_BTN1_LONG_CYCLE
+                    bool "Left/Right Swipe (cyclic)"
+                config MM_IO_BTN1_LONG_HOME
+                    bool "Return to home screen"
+            endchoice
+        endmenu
+
+        # --- BUTTON 2 ---
+        menu "Button 2 Settings"
+            depends on MM_IO_PHYSICAL_BUTTONS >= 2
+
+            config MM_IO_BTN2_GPIO
+                int "GPIO pin"
+                default 0
+
+            choice MM_IO_BTN2_SINGLE_ACTION
+                prompt "Single Press Action"
+                default MM_IO_BTN2_SINGLE_NONE
+                config MM_IO_BTN2_SINGLE_NONE
+                    bool "Disabled"
+                config MM_IO_BTN2_SINGLE_SNOOZE
+                    bool "Snooze"
+                config MM_IO_BTN2_SINGLE_LEFT
+                    bool "Left Swipe"
+                config MM_IO_BTN2_SINGLE_RIGHT
+                    bool "Right Swipe"
+                config MM_IO_BTN2_SINGLE_CYCLE
+                    bool "Left/Right Swipe (cyclic)"
+                config MM_IO_BTN2_SINGLE_HOME
+                    bool "Return to home screen"
+            endchoice
+
+            choice MM_IO_BTN2_LONG_ACTION
+                prompt "Long Press Action"
+                default MM_IO_BTN2_LONG_NONE
+                config MM_IO_BTN2_LONG_NONE
+                    bool "Disabled"
+                config MM_IO_BTN2_LONG_SNOOZE
+                    bool "Snooze"
+                config MM_IO_BTN2_LONG_LEFT
+                    bool "Left Swipe"
+                config MM_IO_BTN2_LONG_RIGHT
+                    bool "Right Swipe"
+                config MM_IO_BTN2_LONG_CYCLE
+                    bool "Left/Right Swipe (cyclic)"
+                config MM_IO_BTN2_LONG_HOME
+                    bool "Return to home screen"
+            endchoice
+        endmenu
+
+        # --- BUTTON 3 ---
+        menu "Button 3 Settings"
+            depends on MM_IO_PHYSICAL_BUTTONS >= 3
+
+            config MM_IO_BTN3_GPIO
+                int "GPIO pin"
+                default 0
+
+            choice MM_IO_BTN3_SINGLE_ACTION
+                prompt "Single Press Action"
+                default MM_IO_BTN3_SINGLE_NONE
+                config MM_IO_BTN3_SINGLE_NONE
+                    bool "Disabled"
+                config MM_IO_BTN3_SINGLE_SNOOZE
+                    bool "Snooze"
+                config MM_IO_BTN3_SINGLE_LEFT
+                    bool "Left Swipe"
+                config MM_IO_BTN3_SINGLE_RIGHT
+                    bool "Right Swipe"
+                config MM_IO_BTN3_SINGLE_CYCLE
+                    bool "Left/Right Swipe (cyclic)"
+                config MM_IO_BTN3_SINGLE_HOME
+                    bool "Return to home screen"
+            endchoice
+
+            choice MM_IO_BTN3_LONG_ACTION
+                prompt "Long Press Action"
+                default MM_IO_BTN3_LONG_NONE
+                config MM_IO_BTN3_LONG_NONE
+                    bool "Disabled"
+                config MM_IO_BTN3_LONG_SNOOZE
+                    bool "Snooze"
+                config MM_IO_BTN3_LONG_LEFT
+                    bool "Left Swipe"
+                config MM_IO_BTN3_LONG_RIGHT
+                    bool "Right Swipe"
+                config MM_IO_BTN3_LONG_CYCLE
+                    bool "Left/Right Swipe (cyclic)"
+                config MM_IO_BTN3_LONG_HOME
+                    bool "Return to home screen"
+            endchoice
+        endmenu
+
+    endmenu
+
+    # OTHER GPIO
+    
+    menu "Led strip"
+        config MM_IO_HAS_LEDSTRIP
+            bool "Enable LED strip support"
+            default n
+            help
+                Enable support for an addressable LED strip (e.g., WS2812).
+
+        if MM_IO_HAS_LEDSTRIP
+
+            config MM_IO_LEDSTRIP_GPIO
+                int "LED strip GPIO pin"
+                default 0
+                help
+                GPIO number used for the LED strip data line.
+
+            config MM_IO_LEDSTRIP_COUNT
+                int "Number of LEDs"
+                default 1
+                range 1 512
+                help
+                Total number of LEDs in the strip.
+
+            choice
+                prompt "LED Strip Color Format"
+                default MM_IO_LEDSTRIP_CF_RGB
+                help
+                    Select the color order used by the LED strip hardware.
+
+                config MM_IO_LEDSTRIP_CF_RGB
+                    bool "RGB Order"
+
+                config MM_IO_LEDSTRIP_CF_GRB
+                    bool "GRB Order"
+
+            endchoice
+
+            config MM_IO_LEDSTRIP_ANIM_SPEED_HZ
+                int "LED strip animation speed (Hz)"
+                default 50
+                help
+                    The speed of LED strip animations.
+
+        endif
+    endmenu
+
+    menu "IMU sensor"
+
+        config MM_IO_ROTATION_TASK_ADDITIONAL_STACK
+            int "Rotation task additional stack size"
+            default 1024
+            help
+                Additional stack space allocated to the rotation processing task in bytes.
+
+        config MM_IO_ROTATION_TASK_PRIO
+            int "Rotation task priority"
+            default 2
+            help
+                The priority of the rotation task.
+
+        config MM_IO_IMU_POLL_PERIOD_MS
+            int "IMU poll period (ms)"
+            default 50
+            help
+                The interval in milliseconds between IMU sensor reads.
+
+        config MM_IO_IMU_ROTATION_CONFIRM_DELAY_MS
+            int "IMU rotation confirmation delay (ms)"
+            default 500
+            help
+                How long a rotation state must be stable before it is confirmed.
+
+        config MM_IO_IMU_PARAM_TAN_A
+            int "IMU Tan A parameter"
+            default 2982
+            help
+                A parameter to specify how close the rotation should be close to the anchor points on the z rotation.
+                Let alpha be the angle from the anchor point and the z current rotation, this parameter should be
+                formatted as MM_IO_IMU_PARAM_SCALE * tan(alpha).
+
+        config MM_IO_IMU_PARAM_TAN_B_SQUARE
+            int "IMU Tan B squared parameter"
+            default 8192
+            help
+                A parameter to specify how close the rotation should be to the anchor points with respect to xy
+                inclination. Let beta be the angle from the xy plane and the current inclination, this parameter should be
+                formatted as MM_IO_IMU_PARAM_SCALE * (tan(beta)^2).
+
+        config MM_IO_IMU_PARAM_SCALE
+            int "IMU parameter scale factor"
+            default 8192
+            help
+                The scaling factor used for MM_IO_IMU_PARAM_TAN_A and MM_IO_IMU_PARAM_TAN_B_SQUARE.
+
+    endmenu
+
+    config MM_IO_LOG_LEVEL
+        int "Maximum log level"
+        range 0 6
+        default 4
+        help
+            Maximum log level for this component
+
+endmenu

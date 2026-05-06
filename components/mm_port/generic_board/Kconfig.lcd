@@ -1,0 +1,182 @@
+
+config MM_PORT_LCD_OFFSET_X # ignore: multiple-definition
+    int "X Offset"
+    default 0
+
+config MM_PORT_LCD_OFFSET_Y
+    int "Y Offset"
+    default 0
+
+config MM_PORT_LCD_MIRROR_X
+    bool "Mirror screen on X axis"
+    default 0
+
+config MM_PORT_LCD_MIRROR_Y
+    bool "Mirror screen on Y axis"
+    default 0
+
+config MM_PORT_LCD_SWAP_XY
+    bool "Swap screen X and Y coordinates"
+    default 0
+
+config MM_PORT_LCD_INVERT_COLOR
+    bool "Invert screen colors"
+    default 0
+
+choice MM_PORT_LCD_INTERFACE
+    prompt "LCD Interface Type"
+    default MM_PORT_LCD_INTERFACE_SPI
+    help
+        Choose between SPI or I2C communication.
+
+    config MM_PORT_LCD_INTERFACE_SPI
+        bool "SPI"
+    config MM_PORT_LCD_INTERFACE_I2C
+        bool "I2C"
+        help 
+            Warning! I2C is still not fully supported.
+endchoice
+
+menu "GPIO Pins"
+    config MM_PORT_LCD_GPIO_BL
+        int "Backlight GPIO"
+        default -1
+
+    config MM_PORT_LCD_GPIO_DC
+        int "Data/Command (DC) GPIO"
+        default -1
+
+    config MM_PORT_LCD_GPIO_CS
+        int "Chip Select (CS) GPIO"
+        default -1
+
+    config MM_PORT_LCD_GPIO_RST
+        int "Reset (RST) GPIO"
+        default -1
+
+    # SPI Specific Pins
+    config MM_PORT_LCD_GPIO_SCLK
+        int "SPI SCLK GPIO"
+        depends on MM_PORT_LCD_INTERFACE_SPI
+        default -1
+
+    config MM_PORT_LCD_GPIO_MOSI
+        int "SPI MOSI GPIO"
+        depends on MM_PORT_LCD_INTERFACE_SPI
+        default -1
+
+    config MM_PORT_LCD_GPIO_MISO
+        int "SPI MISO GPIO"
+        depends on MM_PORT_LCD_INTERFACE_SPI
+        default -1
+
+    # I2C Specific Pins
+    config MM_PORT_LCD_GPIO_SCL
+        int "I2C SCL GPIO"
+        depends on MM_PORT_LCD_INTERFACE_I2C
+        default -1
+
+    config MM_PORT_LCD_GPIO_SDA
+        int "I2C SDA GPIO"
+        depends on MM_PORT_LCD_INTERFACE_I2C
+        default -1
+endmenu
+
+menu "Performance and Buffer Settings"
+
+    config MM_PORT_LCD_DRAW_BUFF_HEIGHT
+        int "Draw Buffer Height"
+        default 80
+        help
+            Draw buffer width is always equal to screen width.
+
+    config MM_PORT_LCD_DRAW_BUFF_DOUBLE
+        bool "Use Double Buffering"
+        default y
+
+    config MM_PORT_LCD_BUFF_DMA
+        bool "Allocate buffer in DMA-capable memory"
+        default n
+
+    config MM_PORT_LCD_BUFF_IN_SPIRAM
+        bool "Allocate buffer in SPIRAM"
+        default n
+
+    config MM_PORT_LCD_PIXEL_CLOCK_HZ
+        int "Pixel Clock Speed (Hz)"
+        default 12000000
+endmenu
+
+menu "Advanced Hardware Settings"
+    config MM_PORT_LCD_BITS_PER_PIXEL
+        int "Bits Per Pixel"
+        default 16
+
+    config MM_PORT_LCD_CMD_BITS
+        int "Command Bits"
+        default 8
+
+    config MM_PORT_LCD_PARAM_BITS
+        int "Parameter Bits"
+        default 8
+
+    config MM_PORT_LCD_SPI_MODE
+        int "SPI Mode"
+        depends on MM_PORT_LCD_INTERFACE_SPI
+        range 0 3
+        default 0
+
+    config MM_PORT_LCD_SPI_NUM
+        int "SPI host number"
+        depends on MM_PORT_LCD_INTERFACE_SPI
+        range 0 3
+        default 0
+        help
+            The SPI peripheral to use (write 2 for SPI2_HOST)
+
+    config MM_PORT_LCD_SPI_TRANS_QUEUE
+        int "SPI transmission queue length"
+        depends on MM_PORT_LCD_INTERFACE_SPI
+        default 10
+
+    config MM_PORT_LCD_I2C_HW_ADDR
+        hex "I2C Hardware Address"
+        depends on MM_PORT_LCD_INTERFACE_I2C
+        default 0x0
+        
+    choice MM_PORT_LCD_DATA_ENDIANNESS
+        prompt "LCD Data Endianness"
+        default MM_PORT_LCD_DATA_LITTLE_ENDIAN
+        config MM_PORT_LCD_DATA_LITTLE_ENDIAN
+            bool "Little Endian"
+        config MM_PORT_LCD_DATA_BIG_ENDIAN
+            bool "Big Endian"
+    endchoice
+
+    choice MM_PORT_LCD_RGB_ENDIANNESS
+        prompt "LCD RGB Element Order"
+        default MM_PORT_LCD_RGB_ENDIAN_RGB
+        config MM_PORT_LCD_RGB_ENDIAN_RGB
+            bool "RGB"
+        config MM_PORT_LCD_RGB_ENDIAN_BGR
+            bool "BGR"
+    endchoice
+endmenu
+
+menu "Backlight Settings"
+    config MM_PORT_LCD_BL_ON_LEVEL
+        int "Backlight On Level (0 or 1)"
+        range 0 1
+        default 1
+
+    config MM_PORT_LEDC_HS_TIMER
+        int "LEDC Timer Number"
+        range 0 3
+        default 0
+
+    config MM_PORT_LEDC_HS_CHANNEL
+        int "LEDC Channel Number"
+        range 0 7
+        default 0
+
+endmenu

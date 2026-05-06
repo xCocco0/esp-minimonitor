@@ -1,0 +1,99 @@
+menu "Minimonitor - Porting"
+    
+    # we need to make this visible because otherwise it will not be
+    # overriden by sdkconfig defaults
+    config MM_PORT_TARGET_BOARD
+        string "Target board"
+        default ""
+        help
+            Please only change this value from sdkconfig.defaults
+
+    # LCD SCREEN SETTINGS
+
+    config MM_PORT_LCD_H_RES
+        int "Horizontal Resolution"
+        default 0
+
+    config MM_PORT_LCD_V_RES
+        int "Vertical Resolution"
+        default 0
+
+    choice MM_PORT_LCD_ROTATION
+        prompt "LCD Rotation"
+        default MM_PORT_LCD_ROTATION_0
+        help
+            Select the screen orientation in degrees.
+
+        config MM_PORT_LCD_ROTATION_0
+            bool "0"
+        config MM_PORT_LCD_ROTATION_90
+            bool "90"
+        config MM_PORT_LCD_ROTATION_180
+            bool "180"
+        config MM_PORT_LCD_ROTATION_270
+            bool "270"
+    endchoice
+
+    config MM_PORT_LVGL_TICK_RESOLUTION_MS
+        int "LVGL tick resolution (ms)"
+        default 2
+        help
+            The period of the LVGL system tick.
+
+    config MM_PORT_DISABLE_ROTATION_PORTRAIT
+        bool "Disable portrait rotation"
+        default y
+        help
+            If enabled, the display driver will only rotate horizontally. Please note that this is relative to the
+            MM_PORT_LCD_ROTATION value. This option makes sense on screens that are so narrow that readjusting the UI
+            is simply not beneficial.
+
+    config MM_PORT_HAS_TOUCHSCREEN
+        bool "Board touchscreen support"
+        default n
+        help
+            Enable this if your board has a touchscreen.
+
+    config MM_PORT_HAS_IMU
+        bool "Gyroscope sensor support"
+        default n
+        help
+            Enable this if your board has an IMU.
+
+    menuconfig MM_PORT_HAS_SDCARD
+        bool "SD card support"
+        default n
+        help
+            Enable this if your board supports external storage.
+    
+    config MM_PORT_SDCARD_MOUNT_POINT
+        string "Mount point name for SD card" if MM_EXPERT
+        default "/sdcard"
+        depends on MM_PORT_HAS_SDCARD
+    
+    config MM_PORT_SDCARD_ICON_DIR
+        string "Directory where to read images on SD card" if MM_EXPERT
+        default "img"
+        depends on MM_PORT_HAS_SDCARD
+
+    config MM_PORT_LOG_LEVEL
+        int "Maximum log level"
+        range 0 6
+        default 4
+        help
+            Maximum log level for this component
+
+    # INCLUDE BOARD SPECIFIC CONFIGURATION
+
+    if MM_PORT_TARGET_BOARD = "waveshare_c6_lcd_1_47"
+        orsource "waveshare_c6_lcd_1_47/Kconfig"
+    endif        
+    # ...
+    # add other boards here
+    # ...
+    if MM_PORT_TARGET_BOARD = "generic_board"
+        orsource "generic_board/Kconfig"
+    endif
+    
+
+endmenu

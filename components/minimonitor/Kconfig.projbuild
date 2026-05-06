@@ -1,0 +1,77 @@
+menu "Minimonitor"
+
+    config MM_EXPERT
+        bool "Expert mode"
+        default false
+        help
+            Enables additional configuration options
+    
+    menu "Event queue"
+
+        config MM_EVENT_QUEUE_LEN
+            int "Event queue length"
+            default 32
+            help
+                The number of events the event queue can hold before dropping new ones.
+
+        config MM_EVENT_TASK_PRIO
+            int "Event task priority"
+            default 1
+            help
+                Priority level for the event task.
+
+        config MM_EVENT_TASK_ADDITIONAL_STACK
+            int "Additional stack size for event task"
+            default 2560
+            help
+                Additional stack size space with respect to the minimal size.
+
+        config MM_EVENT_TASK_PERIOD_MS
+            int "Event task period (ms)"
+            default 10
+            help
+                The period of the event task in milliseconds.
+
+        config MM_NOTIF_FLASH_SINGLE_MS
+            int "Single flash duration (ms)"
+            default 350
+            help
+                Duration of a single notification flash in milliseconds.
+
+        config MM_NOTIF_DEFAULT_DURATION
+            int "Default notification duration (ms)"
+            default 5000
+            help
+                Default notification popup/flash duration.
+
+        config MM_SENSOR_LABEL_MAX_LEN
+            int "Max sensor label length" if MM_EXPERT
+            default 64
+
+        config MM_SENSOR_DESC_FMT_MAX_LEN
+            int "Max sensor description format length" if MM_EXPERT
+            default 64
+
+        config MM_SENSOR_PANEL_FMT_MAX_LEN
+            int "Max sensor panel format length" if MM_EXPERT
+            default 64
+
+    endmenu
+
+    config MM_PERIODIC_RAM_REPORT
+        bool "Periodic RAM usage report"
+        default false
+
+    config MM_PERIODIC_RAM_REPORT_PERIOD_S
+        int "Periodic RAM usage report period (seconds)" if MM_EXPERT
+        default 300
+    
+    # NOTE: global level is set by CONFIG_LOG_MAXIMUM_LEVEL
+    config MM_LOG_LEVEL
+        int "Maximum log level"
+        range 0 6
+        default 4
+        help
+            Maximum log level for this component
+    
+endmenu

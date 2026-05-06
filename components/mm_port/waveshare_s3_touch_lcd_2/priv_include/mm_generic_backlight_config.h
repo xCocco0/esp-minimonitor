@@ -1,0 +1,6 @@
+
+#ifndef __MM_GENERIC_BACKLIGHT_CONFIG_H
+#define __MM_GENERIC_BACKLIGHT_CONFIG_H
+
+
+#endif

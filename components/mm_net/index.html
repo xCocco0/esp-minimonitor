@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiniMonitor</title>
+    <script>
+        const meter_config = [/*PLACEHOLDER_METER_CONFIG*/];
+        const system_config = [/*PLACEHOLDER_SYSTEM_CONFIG*/];
+    </script>
+    <style>
+        body { font-family: sans-serif; background: #121212; color: #eee; padding: 20px; margin: 0; }
+        .header { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; padding: 10px; }
+        .header img { width: 32px; height: 32px; }
+        .header h1 { font-size: 1.5rem; margin: 0; }
+        .title-link { text-decoration: none; color: inherit; }
+        
+        section { margin-bottom: 30px; }
+        
+        .section-header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            cursor: pointer; border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 20px; 
+        }
+        .section-header h2 { font-size: 1.2rem; color: #888; margin: 0; }
+        .chevron { font-size: 0.8rem; transition: transform 0.3s; transform: rotate(0deg); }
+        
+        .collapsed .chevron { transform: rotate(-90deg); }
+        .collapsed + .collapsible-content { display: none; }
+
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+        .sensor-card { background: #1e1e1e; padding: 15px; border-radius: 8px; border: 1px solid #333; }
+        .label-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.9rem; }
+        .meter-bg { background: #333; border-radius: 4px; height: 10px; width: 100%; overflow: hidden; }
+        .meter-bar { height: 100%; width: 0%; transition: width 0.3s ease, background-color 0.3s ease; }
+
+        /* Settings Layout */
+        .settings-list { background: #1e1e1e; padding: 20px; border-radius: 8px; border: 1px solid #333; width: fit-content;}
+        
+        /* The container itself is now the grid */
+        #settings-container { 
+            display: grid; 
+            grid-template-columns: auto 1fr; /* First column fits text, second takes rest */
+            column-gap: 30px; 
+            row-gap: 12px;
+            align-items: baseline; 
+        }
+
+        /* Label style */
+        .config-label { font-size: 0.9rem; color: #bbb; white-space: nowrap; grid-column: 1; }
+        
+        /* Input style */
+        .config-input { 
+            grid-column: 2;
+            background: #2a2a2a; 
+            border: 1px solid #444; 
+            color: #fff; 
+            padding: 6px 10px; 
+            border-radius: 4px; 
+            min-width: 180px; 
+            word-break: break-all;
+            outline: none;
+        }
+        .config-input:focus { border-color: #007bff; background: #333; }
+
+        .save-btn { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 20px; font-weight: bold; }
+        .save-btn:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+
+    <header class="header">
+        <img src="/favicon.ico" alt="Logo">
+        <a href="/index.html" class="title-link">
+            <h1>MiniMonitor</h1>
+        </a>
+    </header>
+
+    <section>
+        <div class="section-header"><h2>Real-time Sensors</h2></div>
+        <div id="dashboard" class="dashboard"></div>
+    </section>
+
+    <section>
+        <div class="section-header collapsed" onclick="this.classList.toggle('collapsed')">
+            <h2>System Settings</h2>
+            <span class="chevron">▼</span>
+        </div>
+        <div class="collapsible-content">
+            <div class="settings-list">
+                <div id="settings-container"></div>
+                <button class="save-btn" onclick="saveSettings()">Apply Changes</button>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        const sensorRefs = {};
+        const originalSettings = new Map();
+
+        // Initialize Sensors
+        meter_config.forEach(s => {
+            const card = document.createElement('div');
+            card.className = 'sensor-card';
+            card.innerHTML = `<div class="label-row"><span>${s.label}</span><strong id="display-${s.index}">--</strong></div>
+                              <div class="meter-bg"><div id="bar-${s.index}" class="meter-bar"></div></div>`;
+            document.getElementById('dashboard').appendChild(card);
+            sensorRefs[s.index] = { bar: document.getElementById(`bar-${s.index}`), text: document.getElementById(`display-${s.index}`), max: s.max_value };
+        });
+
+        // Initialize Settings - Appending directly to grid container
+        system_config.forEach((item, i) => {
+            originalSettings.set(item.config_name, String(item.current_value));
+            
+            // Create Label
+            const label = document.createElement('div');
+            label.className = 'config-label';
+            label.innerText = item.config_name;
+            
+            // Create Input
+            const input = document.createElement('div');
+            input.className = 'config-input';
+            input.id = `cfg-${i}`;
+            input.contentEditable = "true";
+            input.innerText = item.current_value;
+            
+            const container = document.getElementById('settings-container');
+            container.appendChild(label);
+            container.appendChild(input);
+        });
+
+        async function saveSettings() {
+            const delta = [];
+            
+            system_config.forEach((item, i) => {
+                const inputDiv = document.getElementById(`cfg-${i}`);
+                const newVal = inputDiv.innerText.trim();
+                
+                if (newVal !== originalSettings.get(item.config_name)) {
+                    delta.push({ name: item.config_name, value: newVal });
+                }
+            });
+
+            if (delta.length === 0) {
+                alert("No changes detected.");
+                return;
+            }
+
+            try {
+                // Map each change to a fetch promise using the GET syntax
+                const requests = delta.map(item => 
+                    fetch(`/setconfig?name=${encodeURIComponent(item.name)}&value=${encodeURIComponent(item.value)}`, {
+                        method: 'GET'
+                    })
+                );
+
+                const responses = await Promise.all(requests);
+                
+                // Check if all requests were successful
+                if (responses.every(res => res.ok)) {
+                    delta.forEach(d => originalSettings.set(d.name, d.value));
+                    alert("Updated " + delta.length + " setting(s).");
+                } else {
+                    alert("Some updates failed. Please refresh and check.");
+                }
+            } catch (err) {
+                alert("Connection failed.");
+            }
+        }
+
+        const socket = new WebSocket('ws://' + window.location.host + '/ws');
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data); 
+            const s = sensorRefs[data.index];
+            if (s) {
+                s.bar.style.width = `${Math.min((data.value / s.max) * 100, 100)}%`;
+                s.bar.style.backgroundColor = data.bar_color;
+                s.text.innerText = data.value_display;
+            }
+        };
+    </script>
+</body>
+</html>

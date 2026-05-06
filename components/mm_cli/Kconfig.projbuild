@@ -1,0 +1,19 @@
+menu "Minimonitor - Command line interface"
+
+    config MM_CLI_LINE_BUF_SIZE
+        int "Line buffer size"
+        default 256
+
+    config MM_CLI_MAX_PROMPT_LEN
+        int "Max length for CLI prompt" if MM_EXPERT
+        default 24
+        help
+            The length of the prompt at the start of the line before the > symbol.
+
+    config MM_CLI_LOG_LEVEL
+        int "Maximum log level"
+        range 0 6
+        default 4
+        help
+            Maximum log level for this component
+endmenu

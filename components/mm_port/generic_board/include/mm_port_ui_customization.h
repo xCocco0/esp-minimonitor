@@ -1,0 +1,47 @@
+
+#ifndef __MM_PORT_UI_CUSTOMIZATION_H
+#define __MM_PORT_UI_CUSTOMIZATION_H
+
+#include "sdkconfig.h"
+
+#define MM_PORT_FONT_SIZE_TINY         CONFIG_MM_PORT_FONT_SIZE_TINY
+#define MM_PORT_FONT_SIZE_VERY_SMALL   CONFIG_MM_PORT_FONT_SIZE_VERY_SMALL
+#define MM_PORT_FONT_SIZE_SMALL        CONFIG_MM_PORT_FONT_SIZE_SMALL
+#define MM_PORT_FONT_SIZE_NORMAL       CONFIG_MM_PORT_FONT_SIZE_NORMAL
+#define MM_PORT_FONT_SIZE_LARGE        CONFIG_MM_PORT_FONT_SIZE_LARGE
+#define MM_PORT_FONT_SIZE_VERY_LARGE   CONFIG_MM_PORT_FONT_SIZE_VERY_LARGE
+
+// #if MM_PORT_LCD_H_RES_ADJ==240 && MM_PORT_LCD_V_RES_ADJ==135
+// #define MM_PORT_FONT_SIZE_TINY         8
+// #define MM_PORT_FONT_SIZE_VERY_SMALL   12
+// #define MM_PORT_FONT_SIZE_SMALL        16
+// #define MM_PORT_FONT_SIZE_NORMAL       26
+// #define MM_PORT_FONT_SIZE_LARGE        36
+// #define MM_PORT_FONT_SIZE_VERY_LARGE   48
+// #elif MM_PORT_LCD_H_RES_ADJ==240 && MM_PORT_LCD_V_RES_ADJ==240
+// #define MM_PORT_FONT_SIZE_TINY         8
+// #define MM_PORT_FONT_SIZE_VERY_SMALL   12
+// #define MM_PORT_FONT_SIZE_SMALL        22
+// #define MM_PORT_FONT_SIZE_NORMAL       28
+// #define MM_PORT_FONT_SIZE_LARGE        36
+// #define MM_PORT_FONT_SIZE_VERY_LARGE   48
+// #elif MM_PORT_LCD_H_RES_ADJ==448 && MM_PORT_LCD_V_RES_ADJ==368
+// #define MM_PORT_FONT_SIZE_TINY         18
+// #define MM_PORT_FONT_SIZE_VERY_SMALL   24
+// #define MM_PORT_FONT_SIZE_SMALL        32
+// #define MM_PORT_FONT_SIZE_NORMAL       48
+// #define MM_PORT_FONT_SIZE_LARGE        72
+// #define MM_PORT_FONT_SIZE_VERY_LARGE   72
+// #elif MM_PORT_LCD_H_RES_ADJ==320 && MM_PORT_LCD_V_RES_ADJ==172
+// #define MM_PORT_FONT_SIZE_TINY         14
+// #define MM_PORT_FONT_SIZE_VERY_SMALL   16
+// #define MM_PORT_FONT_SIZE_SMALL        22
+// #define MM_PORT_FONT_SIZE_NORMAL       34
+// #define MM_PORT_FONT_SIZE_LARGE        48
+// #define MM_PORT_FONT_SIZE_VERY_LARGE   72
+// #endif
+
+/* Fill non defined values with defaults */
+#include "mm_port_ui_customization_defaults.h"
+
+#endif /* __MM_PORT_UI_CUSTOMIZATION_H */

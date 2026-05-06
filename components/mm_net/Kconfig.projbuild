@@ -1,0 +1,80 @@
+menu "Minimonitor - Network"
+
+    menu "Station"
+        choice MM_NET_WIFI_SAE_MODE
+            prompt "WPA3 SAE mode selection"
+            default MM_NET_WIFI_WPA3_SAE_PWE_HUNT_AND_PECK
+            help
+                Select mode for SAE as Hunt and Peck, H2E or both.
+            config MM_NET_WIFI_WPA3_SAE_PWE_HUNT_AND_PECK
+                bool "HUNT AND PECK"
+            config MM_NET_WIFI_WPA3_SAE_PWE_HASH_TO_ELEMENT
+                bool "H2E"
+                depends on ESP_WIFI_ENABLE_SAE_H2E
+            config MM_NET_WIFI_WPA3_SAE_PWE_BOTH
+                bool "BOTH"
+                depends on ESP_WIFI_ENABLE_SAE_H2E
+        endchoice
+
+        config MM_NET_WIFI_PW_ID
+            string "PASSWORD IDENTIFIER"
+            depends on  MM_NET_WIFI_WPA3_SAE_PWE_HASH_TO_ELEMENT || MM_NET_WIFI_WPA3_SAE_PWE_BOTH
+            default ""
+            help
+                password identifier for SAE H2E
+
+        choice MM_NET_WIFI_SCAN_AUTH_MODE_THRESHOLD
+            prompt "WiFi Scan auth mode threshold"
+            default MM_NET_WIFI_AUTH_WPA_WPA2_PSK
+            help
+                The weakest authmode to accept in the scan mode.
+                This value defaults to MM_NET_WIFI_AUTH_WPA2_PSK in case password is present and MM_NET_WIFI_AUTH_OPEN is used.
+                Please select MM_NET_WIFI_AUTH_WEP/MM_NET_WIFI_AUTH_WPA_PSK in case AP is operating in WEP/WPA mode.
+
+            config MM_NET_WIFI_AUTH_OPEN
+                bool "OPEN"
+            config MM_NET_WIFI_AUTH_WEP
+                bool "WEP"
+            config MM_NET_WIFI_AUTH_WPA_PSK
+                bool "WPA PSK"
+            config MM_NET_WIFI_AUTH_WPA2_PSK
+                bool "WPA2 PSK"
+            config MM_NET_WIFI_AUTH_WPA_WPA2_PSK
+                bool "WPA/WPA2 PSK"
+            config MM_NET_WIFI_AUTH_WPA3_PSK
+                bool "WPA3 PSK"
+            config MM_NET_WIFI_AUTH_WPA2_WPA3_PSK
+                bool "WPA2/WPA3 PSK"
+            config MM_NET_WIFI_AUTH_WAPI_PSK
+                bool "WAPI PSK"
+        endchoice
+
+        config MM_NET_RECONNECT_DELAY_MS
+            int "WiFi reconnect delay"
+            default 5000
+            help
+                Time to wait between reconnections.
+    endmenu
+
+    menu "HTTP server"
+        
+        config MM_NET_HTTP_SERVER_PORT
+            int "HTTP server port"
+            default 80
+            
+        config MM_NET_HTTP_QUERY_ARG_MAX_LEN
+            int "Max query string length" if MM_EXPERT
+            default 80
+            help
+                Maximum supported length for query string parameters.
+
+    endmenu
+
+    config MM_NET_LOG_LEVEL
+        int "Maximum log level"
+        range 0 6
+        default 4
+        help
+            Maximum log level for this component
+
+endmenu

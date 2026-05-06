@@ -1,0 +1,1 @@
+Images from [Chunk 16px Thick Interface Icons Collection](https://www.svgrepo.com/collection/chunk-16px-thick-interface-icons/) by [*Noah Jacobus*](https://noahjacob.us/?ref=svgrepo.com), licensed under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).

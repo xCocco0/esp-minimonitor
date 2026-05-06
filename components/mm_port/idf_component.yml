@@ -1,0 +1,24 @@
+dependencies:
+  idf: '^5.5'
+  lvgl/lvgl: "^8.3.11"
+
+  espressif/esp_lvgl_port:
+    version: "^2.6.3"
+    matches:
+      - if: "$MM_TARGET == generic_board"
+        version: "^2.6.3"
+      - if: "$MM_TARGET == waveshare_c6_lcd_1_47"
+        version: "^2.6.3"
+      - if: "$MM_TARGET == waveshare_s3_touch_lcd_1_47"
+        version: "^2.5.0"
+
+  espressif/esp_lcd_touch:
+    version: "^1.1.2"
+    matches:
+      - if: "$MM_TARGET == waveshare_s3_touch_lcd_1_47"
+        version: "^1.1.2"
+
+  espressif/esp_lcd_touch_cst816s:
+    matches:
+      - if: "$MM_TARGET == waveshare_s3_touch_lcd_2"
+        version: "^1.0.3"

@@ -1,0 +1,29 @@
+menu "Minimonitor - Utils"
+    
+    config MM_UTILS_CONF_REFRESH_INTERVAL_MS
+        int "Config refresh interval (ms)"
+        default 2000
+        help
+            How often to call nvs commit.
+            Note: currently the esp_nvs_commit function is empty, so this is useless.
+
+    config MM_LOG_HISTORY_BYTES
+        int "Log history buffer size (bytes)"
+        default 4000
+        help
+            The size of the ring buffer used for storing log history.
+
+    config MM_LOG_MAX_LINE_LENGTH
+        int "Maximum log line length"
+        default 120
+        help
+            Characters allowed for each log entry line.
+
+    config MM_UTILS_LOG_LEVEL
+        int "Maximum log level"
+        range 0 6
+        default 4
+        help
+            Maximum log level for this component
+        
+endmenu

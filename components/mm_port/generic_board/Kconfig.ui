@@ -1,0 +1,40 @@
+
+
+# font size
+
+config MM_PORT_FONT_SIZE_TINY
+    int "Font size: Tiny"
+    default 14
+    help
+        Font size for notification icon badge.
+
+config MM_PORT_FONT_SIZE_VERY_SMALL
+    int "Font size: Very Small"
+    default 14
+    help
+        Font size for labels inside bars.
+
+config MM_PORT_FONT_SIZE_SMALL
+    int "Font size: Small"
+    default 14
+    help
+        Font size for labels beside bars and toast notifications.
+
+config MM_PORT_FONT_SIZE_NORMAL
+    int "Font size: Normal"
+    default 14
+    help
+        Font size for clock and fps monitor.
+
+config MM_PORT_FONT_SIZE_LARGE
+    int "Font size: Large"
+    default 14
+    help
+        Font size to use for larger clock.
+
+config MM_PORT_FONT_SIZE_VERY_LARGE
+    int "Font size: Very Large"
+    default 14
+    help
+        Font size to use when only clock is shown.
+
