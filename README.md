@@ -20,6 +20,13 @@ For more info on porting new hardware, see [PORTING.md](docs/PORTING.md).
 
 ## Quickstart
 
+#### MiniMonitor Connector
+
+For a GUI-only user experience I developed a python QT app to handle the most common tasks. It also collects sensor data
+from the PC and posts the data to the device.
+
+Check out the [MiniMonitor Connector](https://github.com/xCocco0/minimonitor-connector) repo for additional information.
+
 #### Network
 
 To initialize the WiFi connection and enable SNTP time synchronization, access the CLI via the serial interface and execute:
