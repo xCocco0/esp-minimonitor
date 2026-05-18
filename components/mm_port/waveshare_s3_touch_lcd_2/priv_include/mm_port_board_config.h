@@ -12,7 +12,7 @@
 #define MM_PORT_LCD_OFFSET_X 0
 #define MM_PORT_LCD_OFFSET_Y 0
 #define MM_PORT_LCD_MIRROR_X false
-#define MM_PORT_LCD_MIRROR_Y false
+#define MM_PORT_LCD_MIRROR_Y true
 #define MM_PORT_LCD_SWAP_XY false
 #define MM_PORT_LCD_INVERT_COLOR true
 
