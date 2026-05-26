@@ -65,7 +65,7 @@ static TimerHandle_t s_reconnect_timer;
 static EventGroupHandle_t s_wifi_event_group;
 static esp_netif_ip_info_t ipinfo;
 static SemaphoreHandle_t s_connect_sema;
-
+static esp_netif_t* netif;
 
 static void __connect_timer_cb(TimerHandle_t timer)
 {
@@ -180,6 +180,7 @@ void mm_net_sta_start(void)
     esp_err_t ret;
     BaseType_t retb;
     wifi_config_t wifi_config;
+    char *hostname;
 
     if(!MM_CHECK_W(s_initalized == 0)) {
         return;
@@ -202,7 +203,12 @@ void mm_net_sta_start(void)
 
     ret = esp_event_loop_create_default();
     MM_CHECK_E(ret == ESP_OK);
-    esp_netif_create_default_wifi_sta();
+    netif = esp_netif_create_default_wifi_sta();
+
+    hostname = mm_conf_get_with_malloc(MM_CONF_HOSTNAME);
+    MM_CHECK_MALLOC_E(hostname);
+    esp_netif_set_hostname(netif, hostname);
+    free(hostname);
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ret = esp_wifi_init(&cfg);
