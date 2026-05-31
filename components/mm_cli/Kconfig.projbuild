@@ -10,10 +10,41 @@ menu "Minimonitor - Command line interface"
         help
             The length of the prompt at the start of the line before the > symbol.
 
+    config MM_CLI_MAX_LINE_LEN
+        int "Max CLI line length" if MM_EXPERT
+        default 256
+        help
+            The maximum length of a line in the console.
+
+    config MM_CLI_MAX_ARG_NUM
+        int "Max number of CLI arguments" if MM_EXPERT
+        default 32
+        help
+            The maximum number of arguments to parse in a line.
+
+    config MM_CLI_HISTORY_SIZE
+        int "Size of CLI history"
+        default 32
+        help
+            The maximum line to store in the history buffer.
+
+    config MM_CLI_TASK_ADDITIONAL_STACK
+        int "Additional stack size for the REPL task"
+        default 2048
+        help
+            Additional stack size space with respect to the minimal size.
+
+    config MM_CLI_PROMPT_COLOR
+        int "Prompt color"
+        default 36
+        help
+            The ANSI color for the hostname in the CLI prompt.
+
     config MM_CLI_LOG_LEVEL
         int "Maximum log level"
         range 0 6
         default 4
         help
             Maximum log level for this component
+
 endmenu

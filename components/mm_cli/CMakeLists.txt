@@ -1,7 +1,7 @@
 idf_component_register(SRCS
                     "mm_cli_cmd.c"
                     "mm_cli.c"
-                    PRIV_REQUIRES console minimonitor mm_utils
+                    PRIV_REQUIRES console minimonitor mm_utils driver
                     INCLUDE_DIRS "include"
                     PRIV_INCLUDE_DIRS "priv_include"
 )

@@ -16,6 +16,7 @@
 #include "mm_io_button.h"
 #include "mm_io_ledstrip.h"
 #include "mm_io_imu.h"
+#include "mm_io_usb.h"
 
 static int s_initialized = 0;
 
@@ -31,6 +32,10 @@ void mm_io_init(void)
     #if CONFIG_MM_PORT_HAS_IMU
     mm_io_imu_init();
     mm_io_imu_detect_rotation_start();
+    #endif
+
+    #if CONFIG_MM_IO_ENABLE_USB_OTG
+    mm_io_usb_init();
     #endif
 
     s_initialized = 1;

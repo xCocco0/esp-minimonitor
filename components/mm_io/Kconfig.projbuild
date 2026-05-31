@@ -1,5 +1,5 @@
 menu "Minimonitor - Additional GPIO devices"
-    
+
     menu "Physical buttons"
 
         config MM_IO_PHYSICAL_BUTTONS
@@ -147,7 +147,7 @@ menu "Minimonitor - Additional GPIO devices"
     endmenu
 
     # OTHER GPIO
-    
+
     menu "Led strip"
         config MM_IO_HAS_LEDSTRIP
             bool "Enable LED strip support"
@@ -240,6 +240,26 @@ menu "Minimonitor - Additional GPIO devices"
             default 8192
             help
                 The scaling factor used for MM_IO_IMU_PARAM_TAN_A and MM_IO_IMU_PARAM_TAN_B_SQUARE.
+
+    endmenu
+
+    menu "USB OTG"
+        config MM_IO_ENABLE_USB_OTG
+        bool "Enable USB-OTG support"
+        default n
+        help
+            Disables the USB-JTAG and enables USB-OTG through tinyusb.
+
+        if MM_IO_ENABLE_USB_OTG
+
+            config MM_IO_ENABLE_USB_MSC
+            bool "Enable USB MSC"
+            depends on MM_PORT_HAS_SDCARD
+            default n
+            help
+                 Use the device as USB mass storage (requires an SD Card).
+
+        endif
 
     endmenu
 
