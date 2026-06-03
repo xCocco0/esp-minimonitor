@@ -5,7 +5,7 @@ idf_component_register(SRCS
                     "minimonitor.c"
                     PRIV_REQUIRES esp_event nvs_flash mm_utils espcoredump
                     INCLUDE_DIRS "include"
-                    PRIV_INCLUDE_DIRS "priv_include"
+                    PRIV_INCLUDE_DIRS ""
 )
 
 target_compile_definitions(${COMPONENT_LIB} PRIVATE "-DLOG_LOCAL_LEVEL=${CONFIG_MM_LOG_LEVEL}")

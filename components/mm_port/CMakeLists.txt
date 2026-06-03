@@ -11,7 +11,7 @@ endif()
 idf_component_register(SRCS "mm_port_defaults.c" ${board_src}
                     PRIV_REQUIRES mm_utils lvgl ${board_requires}
                     INCLUDE_DIRS "include" ${board_includes}
-                    PRIV_INCLUDE_DIRS "priv_include" ${board_priv_includes}
+                    PRIV_INCLUDE_DIRS ${board_priv_includes}
                     WHOLE_ARCHIVE
 )
 
