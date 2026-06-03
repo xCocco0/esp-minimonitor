@@ -4,33 +4,36 @@ import os
 import shutil
 import subprocess
 import time
+import sys
+import argparse
 
-def run_build():
+def run_build(version=None, release_dir=None):
     targets = [
         "waveshare_c6_lcd_1_47",
         "waveshare_s3_touch_lcd_1_47",
         "waveshare_s3_touch_lcd_2"
     ]
-    
+
     # determine version
 
     versionfile = "version.txt"
-    version = None
-    if os.path.exists(versionfile):
-        with open(versionfile, "r") as f:
-            version = f.read().strip()
-            print(f"Found version: {version}")
-    if not version:
-        version = input("Enter version [Default: none]: ").strip()
+    if version is None:
+        if os.path.exists(versionfile):
+            with open(versionfile, "r") as f:
+                version = f.read().strip()
+                print(f"Found version: {version}")
         if not version:
-            version = "none"
+            version = input("Enter version [Default: none]: ").strip()
+            if not version:
+                version = "none"
 
     # get output directory
 
-    default_path = "releases"
-    release_dir = input(f"Enter output directory [Default: {default_path}]: ").strip()
-    if not release_dir:
-        release_dir = default_path
+    if release_dir is None:
+        default_path = "releases"
+        release_dir = input(f"Enter output directory [Default: {default_path}]: ").strip()
+        if not release_dir:
+            release_dir = default_path
 
     # create directories
     os.makedirs(release_dir, exist_ok=True)
@@ -38,7 +41,7 @@ def run_build():
     # build for each target
 
     for target in targets:
-        
+
         title = f"Building for target: {target}"
         space = 80 - (len(title) + 2)
         print("\n" + "-"*80)
@@ -56,24 +59,21 @@ def run_build():
         # Build process
         try:
             os.makedirs("build", exist_ok=True)
-            
-            if os.name == 'nt':
-                subprocess.run(
-                    ["cmake", "..", f"-DMM_TARGET={target}", "-G", "Ninja"],
-                    cwd="build",
-                    check=True
-                )
 
-                # Compile/Merge with Ninja
-                subprocess.run(["ninja", "merge-bin"], cwd="build", check=True)
-            else:
-                raise Exception("TODO: add Make support")
+            subprocess.run(
+                ["cmake", "..", f"-DMM_TARGET={target}", "-G", "Ninja"],
+                cwd="build",
+                check=True
+            )
+
+            # Compile/Merge with Ninja
+            subprocess.run(["ninja", "merge-bin"], cwd="build", check=True)
 
             # Export the result
             file_name = f"esp-minimonitor-{version}-{target}.bin"
             destination = os.path.join(release_dir, file_name)
             shutil.copy("build/merged-binary.bin", destination)
-            
+
             print(f"Success: Saved to {destination}")
 
         except subprocess.CalledProcessError as e:
@@ -88,9 +88,17 @@ if __name__ == "__main__":
     ROOT_DIR = os.path.dirname(SCRIPT_DIR)
     os.chdir(ROOT_DIR)
 
+    parser = argparse.ArgumentParser(description=__file__)
+    parser.add_argument("-V", "--version", default=None,
+            help="The version string of the release")
+    parser.add_argument("-o", "--outdir", default=None,
+            help="The directory where to copy firmware binaries")
+
+    args = parser.parse_args()
+
     start = time.time()
-    
-    run_build()
+
+    run_build(version=args.version, release_dir=args.outdir)
 
     elaps = time.time() - start
 
