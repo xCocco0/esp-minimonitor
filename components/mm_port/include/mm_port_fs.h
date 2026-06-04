@@ -12,6 +12,10 @@ extern "C"
 
 mm_err_t mm_port_fs_init(void *arg);
 
+int mm_port_fs_available(void);
+
+void *mm_port_fs_get_iohandle(void);
+
 #ifdef __cplusplus
 }
 #endif

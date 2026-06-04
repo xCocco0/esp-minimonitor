@@ -3,6 +3,7 @@ set(board_src "common/mm_generic_backlight.c"
         "common/mm_generic_sdcard.c"
         "waveshare_s3_touch_lcd_2/mm_port_display.c"
         "waveshare_s3_touch_lcd_2/mm_port_imu.c"
+        "waveshare_s3_touch_lcd_2/mm_port_fs.c"
         "waveshare_s3_touch_lcd_2/bsp_qmi8658.c"
 )
 set(board_requires esp_lcd espressif__esp_lcd_touch_cst816s fatfs)

@@ -11,25 +11,29 @@
 #include "sdkconfig.h"
 
 #if CONFIG_MM_IO_ENABLE_USB_OTG
-#include "mm_log.h"
-#include "mm_err.h"
+
+#include "tusb.h"
 #include "tinyusb.h"
 #include "tinyusb_default_config.h"
 #include "tinyusb_msc.h"
 #include "tinyusb_cdc_acm.h"
-#include "esp_private/usb_phy.h"
-#include "vfs_tinyusb.h"
-#include "esp_mac.h"
 #if CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
 #include "driver/usb_serial_jtag.h"
 #include "driver/usb_serial_jtag_vfs.h"
 #endif
-#include "tusb.h"
 #include "device/dcd.h"
+#include "sd_protocol_types.h"
+#include "esp_mac.h"
+#include "esp_private/usb_phy.h"
+#include "mm_log.h"
+#include "mm_err.h"
+#include "mm_port.h"
+#include "vfs_tinyusb.h"
+
+#define TTY_CDC_NUM TINYUSB_CDC_ACM_0
 
 static char serial_str[18];
 static usb_phy_handle_t jtag_phy = NULL;
-#define TTY_CDC_NUM TINYUSB_CDC_ACM_0
 static tinyusb_msc_storage_handle_t msc_handle;
 
 uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen)
@@ -45,16 +49,15 @@ uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_t
 void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer, uint16_t bufsize) {}
 
 const char *string_descriptor[] = {
-    // array of pointer to string descriptors
-    (char[]){0x09, 0x04},  // 0: is supported language is English (0x0409)
-    "Espressif",             // 1: Manufacturer
-    "USB JTAG/serial debug unit",      // 2: Product
-    serial_str,              // 3: Serials, should use chip ID
+    (char[]){0x09, 0x04},           /* Supported language is English (0x0409) */
+    "Espressif",                    /* Manufacturer */
+    "USB JTAG/serial debug unit",   /* Product */
+    serial_str,                     /* Serials, should use chip ID */
 #if CFG_TUD_CDC
-    "Minimonitor CDC",
+    "Minimonitor CDC",              /* CDC */
 #endif
 #if CFG_TUD_MSC
-    "Minimonitor MSC",
+    "Minimonitor MSC",              /* Mass storage device */
 #endif
 #if CFG_TUD_NCM
     "",
@@ -77,83 +80,100 @@ uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance)
 }
 
 #define __REDIRECT_STREAM(path, mode, stream) do { \
-    fflush(stream); \
-    freopen(path, mode, stream); \
-    setvbuf(stream, NULL, _IONBF, 0); \
+    MM_CHECK_W(fflush(stream) == 0); \
+    MM_CHECK_W(freopen(path, mode, stream) != NULL); \
+    MM_CHECK_W(setvbuf(stream, NULL, _IONBF, 0) == 0); \
 } while(0)
 
 /* note: freopen only affects newly spawned tasks (?) */
 
-esp_err_t redirect_streams_to_tinyusb(void)
+void redirect_streams_to_tinyusb(void)
 {
     __REDIRECT_STREAM(VFS_TUSB_PATH_DEFAULT, "r", stdin);
     __REDIRECT_STREAM(VFS_TUSB_PATH_DEFAULT, "w", stdout);
     __REDIRECT_STREAM(VFS_TUSB_PATH_DEFAULT, "w", stderr);
-    return ESP_OK;
 }
 
-esp_err_t redirect_streams_to_default(void)
+void redirect_streams_to_default(void)
 {
     const char default_console[] = "/dev/console";
     __REDIRECT_STREAM(default_console, "r", stdin);
     __REDIRECT_STREAM(default_console, "w", stdout);
     __REDIRECT_STREAM(default_console, "w", stderr);
-    return ESP_OK;
 }
 
-esp_err_t redirect_streams_to_null(void)
+void redirect_streams_to_null(void)
 {
-    const char null[] = "/dev/null";
-    __REDIRECT_STREAM(null, "r", stdin);
-    __REDIRECT_STREAM(null, "w", stdout);
-    __REDIRECT_STREAM(null, "w", stderr);
-    return ESP_OK;
+    const char devnull[] = "/dev/null";
+    __REDIRECT_STREAM(devnull, "r", stdin);
+    __REDIRECT_STREAM(devnull, "w", stdout);
+    __REDIRECT_STREAM(devnull, "w", stderr);
 }
 
 void mm_io_usb_init(void)
 {
+    tinyusb_config_t tusb_cfg;
+    uint8_t mac[6] = {0,0,0,0,0,0};
+    esp_err_t err;
+    #if CONFIG_MM_PORT_HAS_SDCARD
+    tinyusb_msc_storage_config_t config;
+    #endif
+    tinyusb_config_cdcacm_t acm_cfg;
+
     ESP_LOGI(TAG, "USB initialization");
 
+    /* disable printf */
     redirect_streams_to_null();
 
+    /* if deinit was called before uninstall the jtag driver */
+
     if(jtag_phy) {
-        usb_serial_jtag_driver_uninstall();
+        MM_CHECK_W(usb_serial_jtag_driver_uninstall() == ESP_OK);
         MM_CHECK_W(usb_del_phy(jtag_phy) == ESP_OK);
         jtag_phy = NULL;
     }
 
-    tinyusb_config_t tusb_cfg = TINYUSB_DEFAULT_CONFIG();
-
-    tusb_cfg.descriptor.device = NULL;
-    tusb_cfg.descriptor.string = string_descriptor;
-    tusb_cfg.descriptor.string_count = sizeof(string_descriptor) / sizeof(string_descriptor[0]);
-
     /* use device MAC as serial number */
-    uint8_t mac[6] = {0,0,0,0,0,0};
-    esp_err_t err = esp_efuse_mac_get_default(mac);
 
-    MM_CHECK_W(err == ESP_OK);
-    snprintf(serial_str, sizeof(serial_str), "%02X:%02X:%02X:%02X:%02X:%02X",
-            mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    err = esp_efuse_mac_get_default(mac);
 
-    // extern sdmmc_card_t *card; // TODO
+    if(MM_CHECK_W(err == ESP_OK)) {
+        snprintf(serial_str, sizeof(serial_str), "%02X:%02X:%02X:%02X:%02X:%02X",
+                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    }
 
-    // tinyusb_msc_storage_config_t config = {
-    //     .medium.card = card,
-    // };
+    #if CONFIG_MM_PORT_HAS_SDCARD
+    /* configure MSC device */
 
-    // MM_CHECK_W(tinyusb_msc_new_storage_sdmmc(&config, &msc_handle) == MM_OK);
+    config = (tinyusb_msc_storage_config_t) {
+        .medium.card = (sdmmc_card_t *) mm_port_fs_get_iohandle()
+    };
 
-    tinyusb_config_cdcacm_t acm_cfg = {
+    if(config.medium.card) {
+        MM_CHECK_E(tinyusb_msc_new_storage_sdmmc(&config, &msc_handle) == MM_OK);
+    } else {
+        MM_LOG_W("Unable to create USB MSC");
+    }
+    #endif
+
+    /* configure CDC device */
+
+    acm_cfg = (tinyusb_config_cdcacm_t) {
         .cdc_port = TTY_CDC_NUM,
         .callback_rx = NULL,
         .callback_rx_wanted_char = NULL,
         .callback_line_state_changed = NULL,
         .callback_line_coding_changed = NULL
     };
-    MM_CHECK_W(tinyusb_cdcacm_init(&acm_cfg) == ESP_OK);
+    MM_CHECK_E(tinyusb_cdcacm_init(&acm_cfg) == ESP_OK);
 
-    ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
+    /* start tinyusb stack */
+
+    tusb_cfg = TINYUSB_DEFAULT_CONFIG();
+    tusb_cfg.descriptor.device = NULL;
+    tusb_cfg.descriptor.string = string_descriptor;
+    tusb_cfg.descriptor.string_count = sizeof(string_descriptor) / sizeof(string_descriptor[0]);
+    MM_CHECK_E(tinyusb_driver_install(&tusb_cfg) == ESP_OK);
 
     esp_vfs_tusb_cdc_set_rx_line_endings(ESP_LINE_ENDINGS_CR);
     esp_vfs_tusb_cdc_set_tx_line_endings(ESP_LINE_ENDINGS_CRLF);
@@ -162,7 +182,9 @@ void mm_io_usb_init(void)
     // usb_serial_jtag_driver_install(&usb_serial_jtag_config);
     // usb_serial_jtag_vfs_use_driver();
 
-    esp_vfs_tusb_cdc_register(TTY_CDC_NUM, NULL);
+    /* enable vfs and redirect stdin/out to cdc*/
+
+    MM_CHECK_E(esp_vfs_tusb_cdc_register(TTY_CDC_NUM, NULL) == ESP_OK);
 
     redirect_streams_to_tinyusb();
 

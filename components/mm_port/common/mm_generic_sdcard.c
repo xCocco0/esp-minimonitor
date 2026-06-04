@@ -11,6 +11,8 @@
 #include "sdkconfig.h"
 #include "mm_log.h"
 
+sdmmc_card_t *mm_port_sdcard = NULL;
+
 esp_err_t mm_generic_sdcard_init(void)
 {
     #if MM_PORT_SDCARD_INTERFACE_MMC
@@ -19,7 +21,6 @@ esp_err_t mm_generic_sdcard_init(void)
     esp_vfs_fat_sdmmc_mount_config_t mount_config = VFS_FAT_MOUNT_DEFAULT_CONFIG();
     sdmmc_host_t host = SDMMC_HOST_DEFAULT();
     sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
-    sdmmc_card_t *card;
     const char mount_point[] = CONFIG_MM_PORT_SDCARD_MOUNT_POINT;
 
     mount_config.format_if_mount_failed = false;
@@ -37,7 +38,7 @@ esp_err_t mm_generic_sdcard_init(void)
     slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
 
     MM_LOG_I("Mounting filesystem");
-    ret = esp_vfs_fat_sdmmc_mount(mount_point, &host, &slot_config, &mount_config, &card);
+    ret = esp_vfs_fat_sdmmc_mount(mount_point, &host, &slot_config, &mount_config, &mm_port_sdcard);
 
     if (ret != ESP_OK) {
         if (ret == ESP_FAIL) {
@@ -60,7 +61,6 @@ esp_err_t mm_generic_sdcard_init(void)
     esp_vfs_fat_sdmmc_mount_config_t mount_config = VFS_FAT_MOUNT_DEFAULT_CONFIG();
     sdmmc_host_t host = SDSPI_HOST_DEFAULT();
     sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
-    sdmmc_card_t *card;
     const char mount_point[] = CONFIG_MM_PORT_SDCARD_MOUNT_POINT;
     spi_bus_config_t bus_cfg = {
         .mosi_io_num = MM_PORT_SDCARD_PIN_MOSI,
@@ -98,7 +98,7 @@ esp_err_t mm_generic_sdcard_init(void)
 
     MM_LOG_I("Mounting filesystem");
 
-    ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &card);
+    ret = esp_vfs_fat_sdspi_mount(mount_point, &host, &slot_config, &mount_config, &mm_port_sdcard);
 
     if (ret != ESP_OK) {
         if (ret == ESP_FAIL) {

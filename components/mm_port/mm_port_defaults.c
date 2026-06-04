@@ -70,3 +70,13 @@ mm_err_t __weak_symbol mm_port_fs_init(void *arg)
     #endif
 }
 
+int __weak_symbol mm_port_fs_available(void)
+{
+    return 0;
+}
+
+void __weak_symbol *mm_port_fs_get_iohandle(void)
+{
+    return NULL;
+}
+
