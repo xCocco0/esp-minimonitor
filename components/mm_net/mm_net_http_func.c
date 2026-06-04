@@ -487,7 +487,7 @@ esp_err_t mm_net_http_panic_get_handler(httpd_req_t *req)
 
     httpd_resp_send_chunk(req, iter, panic_end - iter);
 
-    return ESP_OK;
+    return httpd_resp_send_chunk(req, NULL, 0);
 }
 
 esp_err_t mm_net_http_coredump_get_handler(httpd_req_t *req)
