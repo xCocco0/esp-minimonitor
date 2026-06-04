@@ -8,13 +8,15 @@
  */
 
 #include "mm_log.h"
+
+#include "freertos/FreeRTOS.h"
 #include "mm_err.h"
 #include "mm_macros.h"
 #include "sdkconfig.h"
 
 static int s_initialized = 0;
 static int s_buf_index = 0;
-static char __NOINIT_ATTR s_log_buf[CONFIG_MM_LOG_HISTORY_BYTES+CONFIG_MM_LOG_MAX_LINE_LENGTH];
+static char EXT_RAM_NOINIT_ATTR s_log_buf[CONFIG_MM_LOG_HISTORY_BYTES+CONFIG_MM_LOG_MAX_LINE_LENGTH];
 
 /* e.g.: BUFS=20 LINES=15
 0                  BUFS       BUFS+LINES
@@ -42,6 +44,13 @@ void mm_log_init(void)
 int mm_log_vprintf(const char *fmt, va_list va)
 {
     int ret;
+    static _Thread_local int reent = 0;
+
+    if(reent > 0) {
+        return -1;
+    } else {
+        ++reent;
+    }
 
     ret = vsnprintf(&s_log_buf[s_buf_index], sizeof(s_log_buf) - s_buf_index, fmt, va);
 
@@ -55,7 +64,11 @@ int mm_log_vprintf(const char *fmt, va_list va)
         }
     }
 
-    return vprintf(fmt, va);
+    ret = vprintf(fmt, va);
+
+    --reent;
+
+    return ret;
 }
 
 void mm_log(const char *format, ...)
