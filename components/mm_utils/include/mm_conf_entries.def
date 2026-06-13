@@ -18,3 +18,4 @@ CONFIG_FOR_EACH_ENTRY( DONOTDISTURB             , "dnd"           , u8    , 0   
 CONFIG_FOR_EACH_ENTRY( AUTOROTATION             , "autorot"       , u8    , 0                 , 0               )
 CONFIG_FOR_EACH_ENTRY( PREFERRED_ROTATION       , "lastrot"       , u8    , 0                 , 0               )
 CONFIG_FOR_EACH_ENTRY( BACKGROUND_IMAGE         , "bgimg"         , str   , ""                , 1               )
+CONFIG_FOR_EACH_ENTRY( DISABLE_TUSB             , "notusb"        , u8    , 0                 , 1               )
