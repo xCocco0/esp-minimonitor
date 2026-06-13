@@ -147,12 +147,15 @@ void mm_ui_screen_create_main()
         mm_screen_root[MM_SCREEN_MAIN] = screen_main;
         mm_add_style_screen(screen_main, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_scrollbar_mode(screen_main, LV_SCROLLBAR_MODE_OFF);
+        /* background image */
         bg_img_name = (char *) mm_conf_get_with_malloc(MM_CONF_BACKGROUND_IMAGE);
         if(bg_img_name) {
                 if(bg_img_name[0] != '\0') {
                         bg_img = mm_icon_search_in_sdcard(bg_img_name);
                         if(bg_img) {
                                 lv_obj_set_style_bg_img_src(screen_main, bg_img, LV_PART_MAIN | LV_STATE_DEFAULT);
+                        } else {
+                            MM_LOG_W("Could not load '%s' from storage", bg_img_name);
                         }
                 }
                 free(bg_img_name);

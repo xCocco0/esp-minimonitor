@@ -150,9 +150,15 @@ void mm_io_usb_init(void)
     };
 
     if(config.medium.card) {
-        MM_CHECK_E(tinyusb_msc_new_storage_sdmmc(&config, &msc_handle) == MM_OK);
+        err = tinyusb_msc_new_storage_sdmmc(&config, &msc_handle);
     } else {
+        err = ESP_FAIL;
+    }
+
+    if(config.medium.card == NULL || err != ESP_OK) {
         MM_LOG_W("Unable to create USB MSC");
+        tinyusb_msc_driver_config_t default_cfg = {};
+        MM_CHECK_E(tinyusb_msc_install_driver(&default_cfg) == ESP_OK);
     }
     #endif
 
