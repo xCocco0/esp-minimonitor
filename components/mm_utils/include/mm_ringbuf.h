@@ -208,6 +208,8 @@ static inline size_t MM_RINGBUF_WRITE_BACK(mm_ringbuf_t *rb, const char *data, s
  * @param data A pointer to the buffer where data will be stored.
  * @param datasize The maximum number of bytes to read.
  * @return The number of bytes that were written to data.
+ *
+ * @note If data is NULL then the buffer is emptied but nothing is copied
  */
 static inline size_t MM_RINGBUF_PEEK(mm_ringbuf_t *rb, char *data, size_t datasize)
 {
@@ -216,19 +218,25 @@ static inline size_t MM_RINGBUF_PEEK(mm_ringbuf_t *rb, char *data, size_t datasi
         if(b->begin <= b->end) {
                 /* send whole block */
                 blocksize = __MM_RINGBUF_MIN(b->end - b->begin, datasize);
-                memcpy(data, b->buf + b->begin, blocksize);
+                if(data) {
+                    memcpy(data, b->buf + b->begin, blocksize);
+                }
                 ret += blocksize;
         } else {
                 /* send with right part */
                 blocksize = __MM_RINGBUF_MIN(b->bufsize - b->begin, datasize);
-                memcpy(data, b->buf + b->begin, blocksize);
+                if(data) {
+                    memcpy(data, b->buf + b->begin, blocksize);
+                }
                 ret += blocksize;
                 if(blocksize < datasize) {
                         /* send left part */
                         data += blocksize;
                         datasize -= blocksize;
                         blocksize = __MM_RINGBUF_MIN(b->end, datasize);
-                        memcpy(data, b->buf, blocksize);
+                        if(data) {
+                            memcpy(data, b->buf, blocksize);
+                        }
                         ret += blocksize;
                 }
         }
@@ -241,6 +249,8 @@ static inline size_t MM_RINGBUF_PEEK(mm_ringbuf_t *rb, char *data, size_t datasi
  * @param data A pointer to the buffer where data will be stored.
  * @param datasize The maximum number of bytes to write to read.
  * @return The number of bytes that were written to data.
+ *
+ * @note If data is NULL then the buffer is emptied but nothing is copied
  */
 static inline size_t MM_RINGBUF_READ(mm_ringbuf_t *rb, char *data, size_t datasize)
 {

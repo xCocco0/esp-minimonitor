@@ -425,28 +425,40 @@ esp_err_t mm_net_http_panic_get_handler(httpd_req_t *req)
 
     /* === send recent logs === */
 
-    iter = __http_send_until(req, "/*PLACEHOLDER_LOGS*/", iter, panic_end);
+    iter = __http_send_until(req, "/*PLACEHOLDER_OLD_LOGS*/", iter, panic_end);
 
-    char *part1 = mm_log_history_part1();
-    char *part2 = mm_log_history_part2();
+    char *part1, *part2, *current_log_start;
+    size_t part1_left = 0, part2_left = 0;
+
+    current_log_start = mm_log_get_history(&part1, &part1_left, &part2, &part2_left);
+
     char *it = part1;
     char *buf_i = html_buf;
     char *buf_end = html_buf + sizeof(html_buf);
     int part = 1;
     int is_first = 1;
+    int found_init = 0;
+    const char init_str[] = "Log initialized";
 
     //while(*iter != '\n' && *iter != '\0') iter++;
 
     while(1) {
-        if(*it == '\0' && part == 1) {
+        if(part == 1 && part1_left == 0) {
             it = part2;
             part = 2;
         }
 
-        if(*it == '\0' && part == 2) {
+        if(part == 2 && part2_left == 0) {
             sprintf(buf_i, "</p>");
             httpd_resp_sendstr_chunk(req, html_buf);
             break;
+        }
+
+        if(found_init == 0 && it == current_log_start) {
+            /* move to the next placeholder */
+            iter = __http_send_until(req, "/*PLACEHOLDER_LOGS*/", iter, panic_end);
+            found_init = 1;
+            is_first = 1;
         }
 
         if(is_first) {
@@ -467,12 +479,34 @@ esp_err_t mm_net_http_panic_get_handler(httpd_req_t *req)
             httpd_resp_sendstr_chunk(req, html_buf);
             buf_i = html_buf;
             it++;
+            part1_left > 0 ? part1_left--: part2_left--;
             is_first = 1;
             continue;
         }
 
         *buf_i++ = *it++;
+        part1_left > 0 ? part1_left--: part2_left--;
         is_first = 0;
+    }
+
+    iter = __http_send_until(req, "/*PLACEHOLDER_AFTER_LOGS*/", iter, panic_end);
+
+    if(found_init == 0) {
+        /* we didn't find the "Log initialized" string, this means the log
+         * buffer overflowed and all logs refer to the current run */
+        const char *js_shifter = "<script>"
+                "  const oldLogsBox = document.getElementById('old-logs-source');"
+                "  const currentLogsBox = document.getElementById('current-logs-target');"
+                "  const oldLogsWrapper = document.getElementById('old-logs-wrapper');"
+                "  if (oldLogsBox && currentLogsBox) {"
+                "    currentLogsBox.innerHTML = oldLogsBox.innerHTML;"
+                "  }"
+                "  if (oldLogsWrapper) {"
+                "    oldLogsWrapper.remove();"
+                "  }"
+                "</script>";
+
+        httpd_resp_sendstr_chunk(req, js_shifter);
     }
 
     /* === send error reference table === */

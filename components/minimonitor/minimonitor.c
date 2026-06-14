@@ -30,12 +30,15 @@ static void __settime_handler(mm_event_t id, void *data)
 {
     struct timeval *tv = (struct timeval *) data;
     struct tm timeinfo;
+    char ftime_buf[32];
 
     localtime_r(&tv->tv_sec, &timeinfo);
 
     if(tv->tv_sec > 0) {
         settimeofday(tv, NULL);
-        //mm_ui_set_time(timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, tv->tv_usec / 1000);
+
+        strftime(ftime_buf, sizeof(ftime_buf), "%Y %B %d, %I:%M:%S %p", &timeinfo);
+        MM_LOG_I("New time: %s", ftime_buf);
     }
 }
 static void __reboot_handler(mm_event_t id, void *data)

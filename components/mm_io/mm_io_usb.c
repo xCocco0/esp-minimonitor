@@ -123,6 +123,7 @@ void mm_io_usb_init(void)
     ESP_LOGI(TAG, "USB initialization");
 
     /* disable printf */
+    mm_log_pause();
     redirect_streams_to_null();
 
     /* if deinit was called before uninstall the jtag driver */
@@ -184,15 +185,12 @@ void mm_io_usb_init(void)
     esp_vfs_tusb_cdc_set_rx_line_endings(ESP_LINE_ENDINGS_CR);
     esp_vfs_tusb_cdc_set_tx_line_endings(ESP_LINE_ENDINGS_CRLF);
 
-    // usb_serial_jtag_driver_config_t usb_serial_jtag_config = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
-    // usb_serial_jtag_driver_install(&usb_serial_jtag_config);
-    // usb_serial_jtag_vfs_use_driver();
-
     /* enable vfs and redirect stdin/out to cdc*/
 
     MM_CHECK_E(esp_vfs_tusb_cdc_register(TTY_CDC_NUM, NULL) == ESP_OK);
 
     redirect_streams_to_tinyusb();
+    mm_log_resume();
 
     MM_LOG_I("tinyusb stack initialized");
 }

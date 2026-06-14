@@ -35,8 +35,9 @@ void mm_log_init(void);
 int mm_log_vprintf(const char *fmt, va_list va);
 void mm_log(const char *format, ...);
 void mm_log_print_history(void);
-char *mm_log_history_part1(void);
-char *mm_log_history_part2(void);
+void mm_log_pause(void);
+void mm_log_resume(void);
+char *mm_log_get_history(char **part1, size_t *part1_len, char **part2, size_t *part2_len);
 
 #ifdef __cplusplus
 }
