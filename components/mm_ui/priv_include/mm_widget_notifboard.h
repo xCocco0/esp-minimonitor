@@ -7,8 +7,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef __MM_WIDGET_NOTIF_ENTRY_H
-#define __MM_WIDGET_NOTIF_ENTRY_H
+#ifndef __MM_WIDGET_NOTIFBOARD_H
+#define __MM_WIDGET_NOTIFBOARD_H
 
 #include <lvgl.h>
 #include "sdkconfig.h"
@@ -48,4 +48,4 @@ void mm_widget_notifboard_entry_collapse(mm_widget_notifboard_entry_t* widget);
 }
 #endif
 
-#endif /* __MM_WIDGET_NOTIF_ENTRY_H */
+#endif /* __MM_WIDGET_NOTIFBOARD_H */
