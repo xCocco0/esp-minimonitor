@@ -223,7 +223,7 @@ esp_err_t mm_net_http_index_get_handler(httpd_req_t *req)
 
     /* read config and embed into html var */
     config_val_buf = malloc(config_val_buf_size);
-    MM_CHECK_E(config_val_buf != NULL);
+    MM_CHECK_MALLOC_E(config_val_buf);
 
     for(int i = 0; i < MM_CONF_SIZE; ++i) {
         mm_conf_get_as_string(i, NULL, &config_val_buf_size);
@@ -234,6 +234,8 @@ esp_err_t mm_net_http_index_get_handler(httpd_req_t *req)
                 mm_conf_get_name(i), config_val_buf);
         httpd_resp_send_chunk(req, json_buf, MIN(json_len, sizeof(json_buf)));
     }
+
+    free(config_val_buf);
 
     /* send the rest of the page */
     httpd_resp_send_chunk(req, part3_start, part3_len);
@@ -448,7 +450,7 @@ esp_err_t mm_net_http_panic_get_handler(httpd_req_t *req)
             part = 2;
         }
 
-        if(part == 2 && part2_left == 0) {
+        if(part == 2 && part2_left == 0 && buf_i < buf_end) {
             sprintf(buf_i, "</p>");
             httpd_resp_sendstr_chunk(req, html_buf);
             break;
@@ -562,16 +564,19 @@ esp_err_t mm_net_http_setconfig_get_handler(httpd_req_t *req)
 
             if(__opt_from_query_str(buf, "name", param, sizeof(param), name_buf) != 0) {
                 MM_LOG_W("Missing required parameter 'name'");
+                free(buf);
                 return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, NULL);
             }
             if(__opt_from_query_str(buf, "value", param, sizeof(param), value_buf) != 0) {
                 MM_LOG_W("Missing required parameter 'value'");
+                free(buf);
                 return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, NULL);
             }
 
             entry = mm_conf_entry_by_name(name_buf);
             if(entry == MM_CONF_NONE) {
                 MM_LOG_W("Config name %s not found", name_buf);
+                free(buf);
                 return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, NULL);
             } else {
                 MM_LOG_I("Updating config %s to %s", name_buf, value_buf);

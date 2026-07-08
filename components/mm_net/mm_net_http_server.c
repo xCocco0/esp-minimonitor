@@ -17,7 +17,6 @@
 #include "mm_macros.h"
 #include "mm_net_http_func.h"
 
-
 static httpd_handle_t server = NULL;
 
 static const httpd_uri_t httpd_uri_list[] = {
@@ -155,7 +154,7 @@ static void __mm_net_http_ws_send_sensor(mm_event_t id, void *data)
     httpd_ws_frame_t ws_pkt;
     memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
     ws_pkt.payload = (uint8_t *)json_buf;
-    ws_pkt.len = len;
+    ws_pkt.len = MIN(len, sizeof(json_buf) - 1);
     ws_pkt.type = HTTPD_WS_TYPE_TEXT;
 
     __ws_send_all_clients(server, &ws_pkt);
