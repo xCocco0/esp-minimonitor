@@ -131,6 +131,11 @@ void mm_ui_screen_create_main()
         #endif
 
         lv_obj_t *tile_main, *tile_notif, *tile_control;
+        #if CONFIG_MM_IO_ENABLE_USB_OTG
+        lv_obj_t *tile_hid;
+        lv_obj_t *hidactions;
+        lv_obj_t *lbl_no_hid;
+        #endif
         #if CONFIG_MM_UI_USE_CALENDAR
         lv_obj_t *tile_calendar;
         lv_obj_t *calendar;
@@ -422,9 +427,36 @@ void mm_ui_screen_create_main()
 
         /* --------------------------------------------------------------------------------------- */
 
+        #if CONFIG_MM_IO_ENABLE_USB_HID && CONFIG_MM_PORT_HAS_TOUCHSCREEN
+
+        tile_hid = lv_tileview_add_tile(screen_main, 2, 1, LV_DIR_LEFT | LV_DIR_RIGHT);
+        mm_tiles.by_name.tile_hid = tile_hid;
+        MM_STYLE_EMPTY_CONT(tile_hid);
+        lv_obj_set_size(tile_hid, LV_PCT(100), LV_PCT(100));
+        lv_obj_set_style_pad_all(tile_hid, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+        hidactions = mm_widget_hidactions_create(tile_hid);
+        mm_widgets.hidactions = hidactions;
+        lv_obj_center(hidactions);
+        lv_obj_set_size(hidactions, LV_PCT(100), LV_PCT(100));
+        lv_obj_set_style_pad_row(hidactions, MM_PORT_BORDER_INNER, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_pad_top(hidactions, MM_PORT_BORDER_TOP, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_pad_left(hidactions, MM_PORT_BORDER_LEFT, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_pad_right(hidactions, MM_PORT_BORDER_RIGHT, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+        lbl_no_hid = lv_label_create(tile_hid);
+        mm_widgets.lbl_no_hid = lbl_no_hid;
+        lv_obj_center(lbl_no_hid);
+        lv_label_set_text(lbl_no_hid, "No HID controls");
+        lv_obj_set_style_text_font(lbl_no_hid, MM_FONT_SMALL, LV_PART_MAIN | LV_STATE_DEFAULT);
+
+        #endif
+
+        /* --------------------------------------------------------------------------------------- */
+
         #if CONFIG_MM_UI_USE_CALENDAR
 
-        tile_calendar = lv_tileview_add_tile(screen_main, 2, 1, LV_DIR_LEFT);
+        tile_calendar = lv_tileview_add_tile(screen_main, 3, 1, LV_DIR_LEFT);
         mm_tiles.by_name.tile_calendar = tile_calendar;
         MM_STYLE_EMPTY_CONT(tile_calendar);
         lv_obj_set_size(tile_calendar, LV_PCT(100), LV_PCT(100));

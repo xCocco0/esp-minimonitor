@@ -23,7 +23,7 @@
 
 static void __event_panel_pressed_cb(lv_event_t* event)
 {
-    mm_ui_screen_switch_tile(&mm_tiles.by_name.tile_notif);
+    mm_ui_screen_switch_tile(&mm_tiles.by_name.tile_notif, 1);
 }
 
 #endif

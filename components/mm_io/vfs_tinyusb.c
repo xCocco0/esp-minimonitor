@@ -86,9 +86,11 @@ static void unblock_readers(int itf, cdcacm_event_t *event)
     xSemaphoreGiveFromISR(s_vfstusb.buf_empty_sema, &xHigherPriorityTaskWoken);
 
 #ifdef CONFIG_VFS_SUPPORT_SELECT
+    _lock_acquire(&(s_vfstusb.read_lock));
     if (s_vfstusb.select_sema.sem) {
         esp_vfs_select_triggered_isr(s_vfstusb.select_sema, &xHigherPriorityTaskWoken);
     }
+    _lock_release(&(s_vfstusb.read_lock));
 #endif
 
     if (xHigherPriorityTaskWoken) {

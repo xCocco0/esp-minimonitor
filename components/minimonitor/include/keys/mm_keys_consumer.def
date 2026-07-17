@@ -1,0 +1,10 @@
+/*           Macro name                      Value Long name                     Short Name */
+FOR_EACH_KEY(KEY_VOLUME_UP                 , 0xE9, "Volume Up"                 , "Vol+"     )
+FOR_EACH_KEY(KEY_VOLUME_DOWN               , 0xEA, "Volume Down"               , "Vol-"     )
+FOR_EACH_KEY(KEY_AUDIO_MUTE                , 0xE2, "Mute"                      , "Mute"     )
+FOR_EACH_KEY(KEY_MEDIA_PLAY_PAUSE          , 0xCD, "Play/Pause"                , "Play"     )
+FOR_EACH_KEY(KEY_MEDIA_NEXT_TRACK          , 0xB5, "Next Track"                , "NextTrack")
+FOR_EACH_KEY(KEY_MEDIA_PREV_TRACK          , 0xB6, "Previous Track"            , "PrevTrack")
+FOR_EACH_KEY(KEY_BRIGHTNESS_UP             , 0x6F, "Brightness Up"             , "Bright+"  )
+FOR_EACH_KEY(KEY_BRIGHTNESS_DOWN           , 0x70, "Brightness Down"           , "Bright-"  )
+FOR_EACH_KEY(KEY_SYSTEM_SLEEP              , 0x32, "System Sleep"              , "Sleep"    )

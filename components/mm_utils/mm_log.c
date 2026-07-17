@@ -37,9 +37,6 @@ void mm_log_init(void)
 
     s_log_buf[sizeof(s_log_buf)-1] = '\0';
 
-    printf("b %u, e %u\n", s_log_rb.begin, s_log_rb.end);
-    printf("buffer:\n---\n%s\n---\n", s_log_rb.buf);
-
     esp_log_set_vprintf(mm_log_vprintf);
 
     s_initialized = 1;

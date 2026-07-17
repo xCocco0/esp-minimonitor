@@ -27,6 +27,10 @@ extern "C"
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 #endif
 
+#ifndef CLAMP
+#define CLAMP(n,min,max) (MAX(MIN((n), (max)), (min)))
+#endif
+
 #ifndef ABS
 #define ABS(x) ((x) > 0 ? (x) : (-x))
 #endif
@@ -55,6 +59,10 @@ extern "C"
 
 #ifndef CEIL_DIV
 #define CEIL_DIV(a, b) (((a) + (b) - 1) / (b))
+#endif
+
+#ifndef MULT_AND_DIV
+#define MULT_AND_DIV(a,b,div) (((b)/(div))*(a) + (((b)%(div))*(a))/(div))
 #endif
 
 static inline int __USE(int ret, ...) {(void) ret; return ret;}

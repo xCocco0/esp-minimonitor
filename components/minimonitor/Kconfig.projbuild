@@ -5,7 +5,7 @@ menu "Minimonitor"
         default false
         help
             Enables additional configuration options
-    
+
     menu "Event queue"
 
         config MM_EVENT_QUEUE_LEN
@@ -59,13 +59,105 @@ menu "Minimonitor"
     endmenu
 
     config MM_PERIODIC_RAM_REPORT
-        bool "Periodic RAM usage report"
+        bool "Periodic RAM usage report" if MM_EXPERT
         default false
 
-    config MM_PERIODIC_RAM_REPORT_PERIOD_S
-        int "Periodic RAM usage report period (seconds)" if MM_EXPERT
-        default 300
-    
+    if MM_PERIODIC_RAM_REPORT
+
+        config MM_PERIODIC_RAM_REPORT_PERIOD_S
+            int "Periodic RAM usage report period (seconds)" if MM_EXPERT
+            default 300
+
+    endif
+
+    menu "Keyboard/Mouse emulation"
+
+        config MM_HID_CONTROL_MATRIX_MAX_BTN
+            int "Maximum buttons in HID matrix widget"
+            default 4
+            help
+                The maximum number of buttons supported in the HID matrix widget.
+
+        config MM_HID_MAX_NKRO
+            int "Maximum combined keys to be send"
+            default 6
+            range 1 14
+            help
+                The maximum number of concurrent key presses to be sent. Please note that there are also other USB
+                constraints to be take into consideration: maximum 6 keyboards keys + 8 modifiers and maximum 8 mouse
+                buttons.
+
+        config MM_HID_DEFAULT_PRESS_DURATION_MS
+            int "Default HID press duration (ms)"
+            default 30
+            help
+                The default press duration in milliseconds for a button press.
+
+        config MM_MAX_ICON_NAME_LEN
+            int "Maximum icon name length" if MM_EXPERT
+            default 24
+            help
+                The maximum string length allowed for icon names (including the null terminator).
+
+        menu "Touchpad"
+
+            config MM_TP_DEFAULT_QUICK_TAP_MS
+                int "Maximum quick tap time (ms)"
+                default 150
+                help
+                    The maximum duration of a tap to be considered quick.
+
+            config MM_TP_DEFAULT_LONG_TAP_MS
+                int "Minimum long tap time (ms)"
+                default 600
+                help
+                    The minimum duration of a tap to be considered long.
+
+            config MM_TP_DEFAULT_DOUBLE_TAP_MS
+                int "Maximum double tap delay (ms)"
+                default 200
+                help
+                    Maximum delay between taps to be considered a double tap.
+
+            config MM_TP_DEFAULT_DMAX_PX
+                int "Default maximum movement distance (px)"
+                default 2
+                help
+                    The maximum distance in pixels for a touch to still be considered a tap.
+
+            config MM_TP_DEFAULT_ACCELERATION_GAIN
+                int "Default acceleration gain"
+                default 350
+                range 0 65535
+                help
+                    The default acceleration gain value for the touchpad.
+
+            config MM_TP_DEFAULT_RESPONSIVENESS
+                int "Default responsiveness"
+                default 15
+                range 1 100
+                help
+                    The responsiveness factor for cursor movement smoothing.
+
+            config MM_TP_DEFAULT_X_SENSITIVITY
+                int "Default X-axis sensitivity"
+                default 100
+                range 1 65535
+                help
+                The default sensitivity percentage or scaling factor for the X-axis.
+
+            config MM_TP_DEFAULT_Y_SENSITIVITY
+                int "Default Y-axis sensitivity"
+                default 100
+                range 1 65535
+                help
+                The default sensitivity percentage or scaling factor for the Y-axis.
+
+        endmenu
+
+    endmenu
+
+
     # NOTE: global level is set by CONFIG_LOG_MAXIMUM_LEVEL
     config MM_LOG_LEVEL
         int "Maximum log level"
@@ -73,5 +165,5 @@ menu "Minimonitor"
         default 4
         help
             Maximum log level for this component
-    
+
 endmenu

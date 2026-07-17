@@ -259,6 +259,20 @@ menu "Minimonitor - Additional GPIO devices"
             help
                  Use the device as USB mass storage (requires an SD Card).
 
+            config MM_IO_ENABLE_USB_HID
+            bool "Enable USB HID"
+            depends on TINYUSB_HID_COUNT > 0
+            default n
+            help
+                 Use the device as USB HID for keyboard/mouse emulation.
+
+            config MM_IO_TUSB_SEND_TIMEOUT_MS
+                int "Timeout for sending HID reports (ms)"
+                default 500
+                help
+                    The maximum time to wait when sending an HID report.
+
+                 #define CONFIG_MM_IO_TUSB_SEND_TIMEOUT_MS 500
         endif
 
     endmenu

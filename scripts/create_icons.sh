@@ -92,9 +92,8 @@ echo "======================= MM_ICON_* macros ========================="
 for file in $images
 do
 	name=$(echo $(basename $file) | grep -o '^[^\.]*')
-	printf "#define MM_ICON_%-20s ((mm_icon_t *) &mm_icon_%s\n" "$(echo $name | tr 'a-z' 'A-Z')" "$name"
+	printf "#define MM_ICON_%-20s ((mm_icon_t *) &mm_icon_%s)\n" "$(echo $name | tr 'a-z' 'A-Z')" "$name"
 done
-echo '};'
 
 echo "================== name/image array definition= =================="
 
@@ -120,7 +119,7 @@ echo "set(SRC_IMAGES"
 for file in $images
 do
 	name=$(echo $(basename $file) | grep -o '^[^\.]*')
-	printf "    \"icons/v8/mm_icon_%s.c\"\n" "$name"
+	printf "        \"icons/v8/mm_icon_%s.c\"\n" "$name"
 done
 echo ")"
 

@@ -1,0 +1,9 @@
+/*           Macro name       Value Long name         Short Name */
+FOR_EACH_KEY(KEY_LEFTCTRL   , 0x01, "Left Control"  , "Ctrl"   )
+FOR_EACH_KEY(KEY_LEFTSHIFT  , 0x02, "Left Shift"    , "Shift"  )
+FOR_EACH_KEY(KEY_LEFTALT    , 0x04, "Left Alt"      , "Alt"    )
+FOR_EACH_KEY(KEY_LEFTGUI    , 0x08, "Left Window"   , "Gui"    )
+FOR_EACH_KEY(KEY_RIGHTCTRL  , 0x10, "Right Control" , "RCtrl"  )
+FOR_EACH_KEY(KEY_RIGHTSHIFT , 0x20, "Right Shift"   , "RShift" )
+FOR_EACH_KEY(KEY_RIGHTALT   , 0x40, "Right Alt"     , "RAlt"   )
+FOR_EACH_KEY(KEY_RIGHTGUI   , 0x80, "Right Window"  , "RGui"   )

@@ -1,0 +1,12 @@
+/*           Macro name           Value Long name                       Short Name */
+FOR_EACH_KEY(KEY_MOUSE_LEFT     , 0x01, "Left Button"                 , "MouseLeft"   )
+FOR_EACH_KEY(KEY_MOUSE_RIGHT    , 0x02, "Right Button"                , "MouseRight"  )
+FOR_EACH_KEY(KEY_MOUSE_MIDDLE   , 0x04, "Middle Button"               , "MouseMiddle" )
+FOR_EACH_KEY(KEY_MOUSE_BACKWARD , 0x08, "Backward Button"             , "MouseBack"   )
+FOR_EACH_KEY(KEY_MOUSE_FORWARD  , 0x10, "Forward Button"              , "MouseFwd"    )
+FOR_EACH_KEY(KEY_MOUSE_ABS_X    , 0x00, "Mouse Horizontal (Absolute)" , "MouseAbsX"   )
+FOR_EACH_KEY(KEY_MOUSE_ABS_Y    , 0x00, "Mouse Vertical (Absolute)"   , "MouseAbsY"   )
+FOR_EACH_KEY(KEY_MOUSE_DELTA_X  , 0x00, "Mouse Horizontal (Relative)" , "MouseX"      )
+FOR_EACH_KEY(KEY_MOUSE_DELTA_Y  , 0x00, "Mouse Vertical (Relative)"   , "MouseY"      )
+FOR_EACH_KEY(KEY_MOUSE_WHEEL    , 0x00, "Mouse Wheel"                 , "MouseWheel"  )
+FOR_EACH_KEY(KEY_MOUSE_PAD      , 0x00, "Mouse Pad"                   , "MousePad"    )

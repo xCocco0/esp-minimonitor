@@ -18,6 +18,16 @@
 #include "mm_sensor.h"
 #include "mm_macros.h"
 
+static void __print_usage(FILE *f, const char *header, const char *prefix, void *argtable)
+{
+    if(header) {
+        fprintf(f, "%s\n", header);
+    }
+    fprintf(f, "%s", prefix);
+    arg_print_syntax(f, (void **) argtable, "\n");
+    arg_print_glossary_gnu(f, (void **) argtable);
+}
+
 /* ================= hostname cmd ================= */
 #if 1
 
@@ -238,6 +248,316 @@ static int __sensorconfig_cmd(int argc, char **argv)
     mm_confsensor(&param);
 
     return 0;
+}
+
+#endif
+
+/* ================= hidconfig cmd ================= */
+#if CONFIG_MM_IO_ENABLE_USB_HID
+
+static struct {
+    struct arg_str *subcmd;
+    struct arg_end *end;
+} __hidconfig_opt;
+
+static struct {
+    struct arg_int *index;
+    struct arg_str *keys;
+    struct arg_str *icon;
+    struct arg_lit *once;
+    struct arg_lit *toggle;
+    struct arg_int *period;
+    struct arg_int *duration;
+    struct arg_int *jitter;
+    struct arg_int *intensity;
+    struct arg_end *end;
+} __hidconfig_autoclick_opt;
+
+static struct {
+    struct arg_int *index;
+    struct arg_int *intensity;
+    struct arg_str *keys;
+    struct arg_str *icon;
+    struct arg_end *end;
+} __hidconfig_matrix_opt;
+
+static struct {
+    struct arg_int *index;
+    struct arg_int *sens_x;
+    struct arg_int *sens_y;
+    struct arg_end *end;
+} __hidconfig_touchpad_opt;
+
+static int __hidconfig_cmd(int argc, char **argv);
+
+static inline esp_err_t __register_hidconfig(void)
+{
+    esp_console_cmd_t hidconfig_cmd_config = {
+        .command = "hidconfig",
+        .help = "Configure HID controls.",
+        .hint = NULL,
+        .func = &__hidconfig_cmd,
+        .argtable = &__hidconfig_opt,
+    };
+
+    __hidconfig_opt.subcmd = arg_strn(NULL, NULL, "<subcmd>", 1, 1, "Subcommand (autoclick|matrix|touchpad|remove|listkeys)");
+    __hidconfig_opt.end    = arg_end(0);
+
+    __hidconfig_autoclick_opt.index     = arg_intn(NULL, NULL, "<index>", 1, 1, "Index of the control");
+    __hidconfig_autoclick_opt.keys      = arg_strn(NULL, NULL, "<keys>", 1, 1,"Key string");
+    __hidconfig_autoclick_opt.icon      = arg_strn("i", "icon", "<name>", 0, 1, "Icon name");
+    __hidconfig_autoclick_opt.once      = arg_litn("1", "once", 0, 1, "Single click mode");
+    __hidconfig_autoclick_opt.toggle    = arg_litn("T", "toggle", 0, 1, "Toggle press/release mode");
+    __hidconfig_autoclick_opt.period    = arg_intn("P", "period", "<ms>", 0, 1, "Autoclick period (ms)");
+    __hidconfig_autoclick_opt.duration  = arg_intn("d", "duration","<ms>", 0, 1, "Press duration (ms)");
+    __hidconfig_autoclick_opt.jitter    = arg_intn("j", "jitter", "<ms>", 0, 1, "Max period jitter (ms)");
+    __hidconfig_autoclick_opt.intensity = arg_intn("n", "intensity","<val>", 0, 1, "Intensity");
+    __hidconfig_autoclick_opt.end       = arg_end(0);
+
+    __hidconfig_touchpad_opt.index  = arg_intn(NULL, NULL, "<index>", 1, 1, "Index of the control");
+    __hidconfig_touchpad_opt.sens_x = arg_intn("x", NULL, "<val>", 0, 1, "X sensitivity");
+    __hidconfig_touchpad_opt.sens_y = arg_intn("y", NULL, "<val>", 0, 1, "Y sensitivity");
+    __hidconfig_touchpad_opt.end    = arg_end(0);
+
+    __hidconfig_matrix_opt.index     = arg_intn(NULL, NULL, "<index>", 1, 1, "Index of the control");
+    __hidconfig_matrix_opt.intensity = arg_intn("n", "intensity","<val>", 0, 1, "Intensity");
+    __hidconfig_matrix_opt.keys      = arg_strn(NULL, NULL, "<keys ...>", 1, CONFIG_MM_HID_CONTROL_MATRIX_MAX_BTN, "Key string(s)");
+    __hidconfig_matrix_opt.icon      = arg_strn("i", "icon", "<name>", 0, CONFIG_MM_HID_CONTROL_MATRIX_MAX_BTN, "Icon name(s)");
+    __hidconfig_matrix_opt.end       = arg_end(0);
+
+    return esp_console_cmd_register(&hidconfig_cmd_config);
+}
+
+static struct mm_hid_control_config_s confhid_param;
+
+static inline int __hidconfig_autoclick_cmd(int argc, char **argv)
+{
+    int ret;
+
+    if(argc < 3) {
+        __print_usage(stderr, "Usage:", "hidconfig autoclick", &__hidconfig_autoclick_opt);
+        return 1;
+    }
+
+    ret = arg_parse(argc, argv, (void **) &__hidconfig_autoclick_opt);
+    if(ret != 0) {
+        arg_print_errors(stderr, __hidconfig_autoclick_opt.end, argv[0]);
+        return 1;
+    }
+
+    confhid_param = MM_HID_CONTROL_CONFIG_DEFAULT_AUTOCLICK();
+
+    if(__hidconfig_autoclick_opt.index->count > 0) {
+        confhid_param.index = __hidconfig_autoclick_opt.index->ival[0];
+    } else {
+        __print_usage(stderr, "Usage:", "hidconfig autoclick", &__hidconfig_autoclick_opt);
+        return 1;
+    }
+
+    ret = 0;
+    if(__hidconfig_autoclick_opt.keys->count > 0) {
+        ret = mm_hid_control_fullname_to_key_arr(confhid_param.u.autoclicker.keys, CONFIG_MM_HID_MAX_NKRO,
+                __hidconfig_autoclick_opt.keys->sval[0]);
+    }
+
+    if(ret <= 0) {
+        fprintf(stderr, "Could not parse key string\n");
+        return 1;
+    }
+
+    /* icon name */
+    if(__hidconfig_autoclick_opt.icon->count > 0) {
+        strncpy(confhid_param.u.autoclicker.icon, __hidconfig_autoclick_opt.icon->sval[0], sizeof(confhid_param.u.autoclicker.icon));
+    }
+    /* duration */
+    if(__hidconfig_autoclick_opt.duration->count > 0) {
+        confhid_param.u.autoclicker.duration_ms = __hidconfig_autoclick_opt.duration->ival[0];
+    }
+    /* period */
+    if(__hidconfig_autoclick_opt.period->count > 0) {
+        confhid_param.u.autoclicker.period_ms = __hidconfig_autoclick_opt.period->ival[0];
+    }
+    /* intensity */
+    if(__hidconfig_autoclick_opt.intensity->count > 0) {
+        confhid_param.u.autoclicker.intensity = __hidconfig_autoclick_opt.intensity->ival[0];
+    }
+    /* jitter */
+    if(__hidconfig_autoclick_opt.jitter->count > 0) {
+        confhid_param.u.autoclicker.jitter_ms = __hidconfig_autoclick_opt.jitter->ival[0];
+    }
+    /* once */
+    if(__hidconfig_autoclick_opt.toggle->count > 0) {
+        confhid_param.u.autoclicker.duration_ms = 0;
+    }
+    /* toggle */
+    if(__hidconfig_autoclick_opt.once->count > 0) {
+        confhid_param.u.autoclicker.period_ms = 0;
+        if(confhid_param.u.autoclicker.duration_ms == 0) {
+            confhid_param.u.autoclicker.duration_ms = 1;
+        }
+    }
+
+    mm_confhid(&confhid_param);
+
+    return 0;
+}
+
+static inline int __hidconfig_matrix_cmd(int argc, char **argv)
+{
+    int ret;
+
+    if(argc < 3) {
+        __print_usage(stderr, "Usage:", "hidconfig matrix", &__hidconfig_matrix_opt);
+        return 1;
+    }
+
+    ret = arg_parse(argc, argv, (void **) &__hidconfig_matrix_opt);
+    if(ret != 0) {
+        arg_print_errors(stderr, __hidconfig_matrix_opt.end, argv[0]);
+        return 1;
+    }
+
+    confhid_param = MM_HID_CONTROL_CONFIG_DEFAULT_MATRIX();
+
+    if(__hidconfig_matrix_opt.index->count > 0) {
+        confhid_param.index = __hidconfig_matrix_opt.index->ival[0];
+    } else {
+        __print_usage(stderr, "Usage:", "hidconfig matrix", &__hidconfig_matrix_opt);
+        return 1;
+    }
+
+    if(__hidconfig_matrix_opt.intensity->count > 0) {
+        confhid_param.u.matrix.intensity = __hidconfig_matrix_opt.intensity->ival[0];
+    }
+
+    for(int i = 0; i < CONFIG_MM_HID_CONTROL_MATRIX_MAX_BTN; ++i) {
+        if(i < __hidconfig_matrix_opt.keys->count) {
+            ret = mm_hid_control_fullname_to_key_arr(confhid_param.u.matrix.keys[i], CONFIG_MM_HID_MAX_NKRO,
+                    __hidconfig_matrix_opt.keys->sval[i]);
+            if(ret <= 0) {
+                fprintf(stderr, "Could not parse key string\n");
+                return 1;
+            }
+        }
+        if(i < __hidconfig_matrix_opt.icon->count) {
+            strcpy(&confhid_param.u.matrix.icons[i][0], __hidconfig_matrix_opt.icon->sval[i]);
+        }
+    }
+
+    mm_confhid(&confhid_param);
+
+    return 0;
+}
+
+static inline int __hidconfig_touchpad_cmd(int argc, char **argv)
+{
+    int ret;
+
+    ret = arg_parse(argc, argv, (void **) &__hidconfig_touchpad_opt);
+    if(ret != 0) {
+        arg_print_errors(stderr, __hidconfig_touchpad_opt.end, argv[0]);
+        return 1;
+    }
+
+    memset(&confhid_param, 0, sizeof(struct mm_hid_control_config_s));
+
+    confhid_param = MM_HID_CONTROL_CONFIG_DEFAULT_TOUCHPAD();
+
+    if(__hidconfig_touchpad_opt.index->count > 0) {
+        confhid_param.index = __hidconfig_touchpad_opt.index->ival[0];
+    } else {
+        __print_usage(stderr, "Usage:", "hidconfig touchpad", &__hidconfig_touchpad_opt);
+        return 1;
+    }
+
+    if(__hidconfig_touchpad_opt.sens_x->count > 0) {
+        confhid_param.u.touchpad.sensitivity_x = __hidconfig_touchpad_opt.sens_x->ival[0];
+    }
+    if(__hidconfig_touchpad_opt.sens_y->count > 0) {
+        confhid_param.u.touchpad.sensitivity_y = __hidconfig_touchpad_opt.sens_y->ival[0];
+    }
+
+    mm_confhid(&confhid_param);
+
+    return 0;
+}
+
+static inline int __hidconfig_remove_cmd(int argc, char **argv)
+{
+    int index;
+
+    if(argc < 2) {
+        fprintf(stderr, "Usage:\nhidconfig remove <index>\n");
+        return 1;
+    }
+
+    index = atoi(argv[1]);
+
+    confhid_param.index = index;
+    confhid_param.type = MM_HID_CONTROL_INVALID;
+
+    mm_confhid(&confhid_param);
+
+    return 0;
+}
+
+static inline int __hidconfig_listkeys_cmd(int argc, char **argv)
+{
+    printf("%11c %11s %28s\n", ' ', "[Key Code]", "[Full Name]");
+    for(int i = 1; i < MM_KEY_ENUM_MAX; ++i) {
+        if(MM_KEY_IS_KEYBOARD(i)) {
+            printf("%-11s %11s %28s\n", "[Keyboard]", MM_KEY_TO_STR(i), MM_KEY_TO_LONG_STR(i));
+        }
+        if(MM_KEY_IS_MOUSE(i)) {
+            printf("%-11s %11s %28s\n", "[Mouse]", MM_KEY_TO_STR(i), MM_KEY_TO_LONG_STR(i));
+        }
+        if(MM_KEY_IS_MODIFIER(i)) {
+            printf("%-11s %11s %28s\n", "[Modifier]", MM_KEY_TO_STR(i), MM_KEY_TO_LONG_STR(i));
+        }
+        if(MM_KEY_IS_CONSUMER(i)) {
+            printf("%-11s %11s %28s\n", "[Consumer]", MM_KEY_TO_STR(i), MM_KEY_TO_LONG_STR(i));
+        }
+    }
+    printf("\ne.g.: Shift+Ctrl+MouseLeft, MouseBack, KPad++KPad-\n");
+
+    return 0;
+}
+
+static int __hidconfig_cmd(int argc, char **argv)
+{
+    int ret;
+
+    if(argc < 2) {
+        __print_usage(stderr, "Usage:", argv[0], &__hidconfig_opt);
+        __print_usage(stderr, NULL, "hidconfig autoclick", &__hidconfig_autoclick_opt);
+        __print_usage(stderr, NULL, "hidconfig matrix", &__hidconfig_matrix_opt);
+        __print_usage(stderr, NULL, "hidconfig touchpad", &__hidconfig_touchpad_opt);
+        return 1;
+    }
+
+    ret = arg_parse(2, argv, (void **) &__hidconfig_opt);
+    if(ret != 0) {
+        arg_print_errors(stderr, __hidconfig_opt.end, argv[0]);
+        return 1;
+    }
+
+    if(strcmp(__hidconfig_opt.subcmd->sval[0], "autoclick") == 0) {
+        return __hidconfig_autoclick_cmd(argc-1, &argv[1]);
+
+    } else if(strcmp(__hidconfig_opt.subcmd->sval[0], "matrix") == 0) {
+        return __hidconfig_matrix_cmd(argc-1, &argv[1]);
+
+    } else if(strcmp(__hidconfig_opt.subcmd->sval[0], "touchpad") == 0) {
+        return __hidconfig_touchpad_cmd(argc-1, &argv[1]);
+
+    } else if(strcmp(__hidconfig_opt.subcmd->sval[0], "remove") == 0) {
+        return __hidconfig_remove_cmd(argc-1, &argv[1]);
+
+    } else if(strcmp(__hidconfig_opt.subcmd->sval[0], "listkeys") == 0) {
+        return __hidconfig_listkeys_cmd(argc-1, &argv[1]);
+    }
+
+    return 1;
 }
 
 #endif
@@ -972,5 +1292,7 @@ void mm_cli_cmd_register_all(void)
     MM_CHECK_E(__register_backlight() == ESP_OK);
     MM_CHECK_E(__register_log() == ESP_OK);
     MM_CHECK_E(__register_rotate() == ESP_OK);
-
+    #if CONFIG_MM_IO_ENABLE_USB_HID
+    MM_CHECK_E(__register_hidconfig() == ESP_OK);
+    #endif
 }

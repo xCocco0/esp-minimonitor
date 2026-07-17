@@ -95,6 +95,22 @@ void mm_event_add_handler(mm_event_t id, mm_event_handler_t func)
     MM_LIST_ADD_BACK(s_event_handler_list[id], n->node);
 }
 
+/**
+ * @brief Removes an handler previously added with mm_event_add_handler
+ * If func is NULL, all handlers will be deleted.
+ */
+void mm_event_delete_handler(mm_event_t id, mm_event_handler_t func)
+{
+    MM_LIST_FOREACH(s_event_handler_list[id], it) {
+        struct mm_event_handler_node *n = MM_LIST_ITEM(it, struct mm_event_handler_node, node);
+
+        if(func == NULL || n->func == func) {
+            MM_LIST_REMOVE(s_event_handler_list[id], it);
+            free(n);
+        }
+    }
+}
+
 static void __mm_event_call_all_handlers(mm_event_t id, void *data) {
     MM_LIST_FOREACH(s_event_handler_list[id], it) {
         struct mm_event_handler_node *n = MM_LIST_ITEM(it, struct mm_event_handler_node, node);
@@ -405,7 +421,6 @@ static void __mm_event_cleanup_bsod(void *data)
  *
  * @param rotation[in] Screen rotation in degrees
  */
-
 void mm_event_queue_motion(mm_motion_t motion)
 {
     mm_event_queue(MM_EVENT_MOTION, (void *) motion);
@@ -414,6 +429,45 @@ void mm_event_queue_motion(mm_motion_t motion)
 static void __mm_event_cleanup_motion(void *data)
 {
     (void) data;
+}
+
+/* --- MM_EVENT_CONFHID --- */
+
+/**
+ * @brief Queue event to configure HID UI section
+ */
+
+void mm_event_queue_confhid(struct mm_hid_control_config_s *param)
+{
+    struct mm_hid_control_config_s *data = (struct mm_hid_control_config_s *) malloc(sizeof(struct mm_hid_control_config_s));
+    MM_CHECK_MALLOC_E(data);
+
+    memcpy(data, param, sizeof(struct mm_hid_control_config_s));
+    mm_event_queue(MM_EVENT_CONFHID, (void *) data);
+}
+
+static void __mm_event_cleanup_confhid(void *data)
+{
+    free(data);
+}
+
+/* --- MM_EVENT_SENDHID --- */
+
+/**
+ * @brief Queue event to send HID report
+ */
+void mm_event_queue_sendhid(struct mm_hid_action_s *param)
+{
+    struct mm_hid_action_s *data = (struct mm_hid_action_s *) malloc(sizeof(struct mm_hid_action_s));
+    MM_CHECK_MALLOC_E(data);
+
+    memcpy(data, param, sizeof(struct mm_hid_action_s));
+    mm_event_queue(MM_EVENT_SENDHID, (void *) data);
+}
+
+static void __mm_event_cleanup_sendhid(void *data)
+{
+    free(data);
 }
 
 /* --- */
@@ -435,6 +489,8 @@ static void __mm_event_cleanup(mm_event_t id, void *data)
         case MM_EVENT_SETBACKLIGHT:    __mm_event_cleanup_setbacklight(data);    break;
         case MM_EVENT_BSOD:            __mm_event_cleanup_bsod(data);            break;
         case MM_EVENT_MOTION:          __mm_event_cleanup_motion(data);          break;
+        case MM_EVENT_CONFHID:         __mm_event_cleanup_confhid(data);         break;
+        case MM_EVENT_SENDHID:         __mm_event_cleanup_sendhid(data);         break;
         default: break; /* default also covers EVENT_PERIODIC and EVENT_STARTUP */
     }
 }
@@ -446,15 +502,44 @@ static void mm_event_task(void *args)
     BaseType_t ret;
     struct mm_event_generic e;
     uint32_t next_event;
+    TickType_t wait_start;
 
     for(;;) {
 
-        ret = xQueueReceive(s_event_queue, &e, __DELTA_T);
+        if(MM_LIST_LEN(s_event_handler_list[MM_EVENT_BACKGROUND]) > 0) {
+            /* busy wait */
+            wait_start = xTaskGetTickCount();
+            /* we lower priority to avoid starvation */
+            vTaskPrioritySet(NULL, 1);
+
+            while(1) {
+                if(xTaskGetTickCount() - wait_start > __DELTA_T) {
+                    /* handle MM_EVENT_PERIODIC events */
+                    ret = pdFALSE;
+                    break;
+                }
+                if(xQueueReceive(s_event_queue, &e, 0) != pdTRUE) {
+                    /* run background handlers */
+                    __mm_event_call_all_handlers(MM_EVENT_BACKGROUND, NULL);
+                } else {
+                    /* process received event */
+                    ret = pdTRUE;
+                    break;
+                }
+            }
+
+            vTaskPrioritySet(NULL, CONFIG_MM_EVENT_TASK_PRIO);
+
+        } else {
+            /* blocking wait */
+            ret = xQueueReceive(s_event_queue, &e, __DELTA_T);
+        }
 
         if(ret == pdPASS) {
             /* received event */
 
             do {
+                /* process events */
                 __mm_event_call_all_handlers(e.id, e.data);
                 __mm_event_cleanup(e.id, e.data);
 

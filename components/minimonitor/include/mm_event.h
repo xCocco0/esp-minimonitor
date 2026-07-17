@@ -14,6 +14,7 @@
 #include <time.h>
 #include "mm_panic.h"
 #include "mm_sensor.h"
+#include "mm_hid_control.h"
 #include "mm_types.h"
 #include "mm_err.h"
 
@@ -24,6 +25,7 @@ extern "C"
 
 typedef enum {
     MM_EVENT_PERIODIC = 0,        /**< Pseudo-periodic handler (with `0 < period <= CONFIG_MM_EVENT_TASK_PERIOD_MS`) */
+    MM_EVENT_BACKGROUND,          /**< Called continously while waiting for events */
     MM_EVENT_SETTIME,             /**< Update system time */
     MM_EVENT_NOTIFY,              /**< Incoming system notification */
     MM_EVENT_SNOOZE,              /**< Snooze notifications */
@@ -39,6 +41,8 @@ typedef enum {
     MM_EVENT_BSOD,                /**< A panic was detected */
     MM_EVENT_STARTUP,             /**< Minimonitor started up */
     MM_EVENT_MOTION,              /**< IMU motion detected */
+    MM_EVENT_CONFHID,             /**<  */
+    MM_EVENT_SENDHID,             /**<  */
 
     MM_EVENT_MAX,
 } mm_event_t;
@@ -50,6 +54,7 @@ void mm_event_start(void);
 
 void mm_event_queue(mm_event_t id, void *data);
 void mm_event_add_handler(mm_event_t id, mm_event_handler_t func);
+void mm_event_delete_handler(mm_event_t id, mm_event_handler_t func);
 
 void mm_event_queue_settime(struct timeval *tv);
 void mm_event_queue_notify(const char *name,
@@ -71,6 +76,8 @@ void mm_event_queue_changetile(mm_tile_command_t cmd);
 void mm_event_queue_setbacklight(uint8_t bk);
 void mm_event_queue_bsod(struct mm_panic_info_s *param);
 void mm_event_queue_motion(mm_motion_t motion);
+void mm_event_queue_confhid(struct mm_hid_control_config_s *param);
+void mm_event_queue_sendhid(struct mm_hid_action_s *param);
 
 #ifdef __cplusplus
 }

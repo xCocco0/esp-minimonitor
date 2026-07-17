@@ -26,6 +26,7 @@ struct mm_widget_button_s {
 typedef struct mm_widget_button_s mm_widget_button_t;
 
 mm_widget_button_t *mm_widget_button_create(lv_obj_t *parent, mm_icon_t *ico, uint32_t color);
+mm_widget_button_t *mm_widget_button_create_with_text(lv_obj_t *parent, const char* text, uint32_t color);
 mm_widget_button_t *mm_widget_button_create_checkable(lv_obj_t *parent, mm_icon_t *ico, uint32_t color, int initial_state);
 void mm_widget_button_del(mm_widget_button_t *widget);
 

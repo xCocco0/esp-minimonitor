@@ -25,7 +25,7 @@
 
 static void __event_clear_button_cb(lv_event_t* event)
 {
-    mm_ui_screen_switch_tile(&mm_tiles.by_name.tile_main);
+    mm_ui_screen_switch_tile(&mm_tiles.by_name.tile_main, 1);
     mm_ui_snooze(NULL);
 }
 

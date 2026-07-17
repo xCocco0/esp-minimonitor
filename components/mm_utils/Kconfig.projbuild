@@ -1,5 +1,5 @@
 menu "Minimonitor - Utils"
-    
+
     config MM_UTILS_CONF_REFRESH_INTERVAL_MS
         int "Config refresh interval (ms)"
         default 2000
@@ -15,7 +15,7 @@ menu "Minimonitor - Utils"
 
     config MM_LOG_MAX_LINE_LENGTH
         int "Maximum log line length"
-        default 120
+        default 180
         help
             Characters allowed for each log entry line.
 
@@ -25,5 +25,5 @@ menu "Minimonitor - Utils"
         default 4
         help
             Maximum log level for this component
-        
+
 endmenu

@@ -1,0 +1,5 @@
+/* Syntax sugar for including all key macros */
+#include "mm_keys_keyboard.def"
+#include "mm_keys_modifiers.def"
+#include "mm_keys_mouse.def"
+#include "mm_keys_consumer.def"

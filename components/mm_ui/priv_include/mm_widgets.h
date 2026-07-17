@@ -21,6 +21,7 @@
 #include "mm_widget_clock.h"
 #include "mm_widget_toast.h"
 #include "mm_widget_button.h"
+#include "mm_widget_hidactions.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -40,6 +41,8 @@ struct __mm_widgets_s {
     mm_widget_notifboard_t *board_notif;
     mm_widget_clock_t *clock;
     mm_widget_toast_t *toast;
+    lv_obj_t *hidactions;
+    lv_obj_t *lbl_no_hid;
     lv_obj_t *lbl_no_notif;
     lv_obj_t *slider_brightness;
     lv_obj_t *calendar;
@@ -56,6 +59,9 @@ extern __mm_widgets_t mm_widgets;
 struct __mm_tiles_s {
     lv_obj_t *tile_notif;
     lv_obj_t *tile_main;
+    #if CONFIG_MM_IO_ENABLE_USB_OTG
+    lv_obj_t *tile_hid;
+    #endif
     #if CONFIG_MM_UI_USE_CALENDAR
     lv_obj_t *tile_calendar;
     #endif

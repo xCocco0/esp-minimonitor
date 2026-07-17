@@ -19,6 +19,7 @@ extern "C"
 #include <time.h>
 #include "mm_types.h"
 #include "mm_sensor.h"
+#include "mm_hid_control.h"
 #include "mm_err.h"
 
 void mm_init(void);
@@ -42,6 +43,7 @@ void mm_toast(const char *msg);
 void mm_snooze(const char* name);
 void mm_setsensor(int index, uint32_t value1, uint32_t value2, uint32_t valueP);
 void mm_confsensor(struct mm_sensor_meter_config_s *config);
+void mm_confhid(struct mm_hid_control_config_s *config);
 void mm_reboot(void);
 void mm_shutdown(void);
 void mm_sntptrigger(void);

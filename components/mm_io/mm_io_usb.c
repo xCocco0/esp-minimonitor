@@ -28,13 +28,15 @@
 #include "mm_log.h"
 #include "mm_err.h"
 #include "mm_port.h"
+#include "mm_event.h"
 #include "vfs_tinyusb.h"
+#include "mm_usb_descriptors.h"
 
-#define TTY_CDC_NUM TINYUSB_CDC_ACM_0
-
-static char serial_str[18];
 static usb_phy_handle_t jtag_phy = NULL;
 static tinyusb_msc_storage_handle_t msc_handle;
+static SemaphoreHandle_t s_send_report_sema = NULL;
+
+#if CONFIG_MM_IO_ENABLE_USB_HID
 
 uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen)
 {
@@ -48,36 +50,106 @@ uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_t
 
 void tud_hid_set_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t const *buffer, uint16_t bufsize) {}
 
-const char *string_descriptor[] = {
-    (char[]){0x09, 0x04},           /* Supported language is English (0x0409) */
-    "Espressif",                    /* Manufacturer */
-    "USB JTAG/serial debug unit",   /* Product */
-    serial_str,                     /* Serials, should use chip ID */
-#if CFG_TUD_CDC
-    "Minimonitor CDC",              /* CDC */
-#endif
-#if CFG_TUD_MSC
-    "Minimonitor MSC",              /* Mass storage device */
-#endif
-#if CFG_TUD_NCM
-    "",
-    "",
-#endif
-#if CFG_TUD_VENDOR
-    "",
-#endif
-};
-
-const uint8_t hid_report_descriptor[] = {
-    TUD_HID_REPORT_DESC_KEYBOARD(HID_REPORT_ID(HID_ITF_PROTOCOL_KEYBOARD)),
-    TUD_HID_REPORT_DESC_MOUSE(HID_REPORT_ID(HID_ITF_PROTOCOL_MOUSE))
-};
-
 uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance)
 {
     // We use only one interface and one HID report descriptor, so we can ignore parameter 'instance'
     return hid_report_descriptor;
 }
+
+void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint16_t len)
+{
+    xSemaphoreGive(s_send_report_sema);
+}
+
+void tud_hid_report_failed_cb(uint8_t instance, hid_report_type_t report_type, uint8_t const* report, uint16_t xferred_bytes)
+{
+    MM_LOG_E("TUD transfer failed");
+    xSemaphoreGive(s_send_report_sema);
+}
+
+static mm_err_t __send_report_consumer(uint16_t control)
+{
+    BaseType_t ret;
+
+    ret = xSemaphoreTake(s_send_report_sema, pdMS_TO_TICKS(CONFIG_MM_IO_TUSB_SEND_TIMEOUT_MS));
+
+    /* note: just warn user */
+    MM_CHECK_W(ret == pdTRUE);
+
+    return tud_hid_report(REPORT_ID_CONSUMER, &control, sizeof(control)) ? MM_OK : MM_FAIL;
+}
+
+static mm_err_t __send_report_keyboard(uint8_t modifier, const uint8_t keycode[6])
+{
+    BaseType_t ret;
+
+    ret = xSemaphoreTake(s_send_report_sema, pdMS_TO_TICKS(CONFIG_MM_IO_TUSB_SEND_TIMEOUT_MS));
+
+    /* note: just warn user */
+    MM_CHECK_W(ret == pdTRUE);
+
+    return tud_hid_keyboard_report(REPORT_ID_KEYBOARD, modifier, keycode) ? MM_OK : MM_FAIL;
+}
+
+static mm_err_t __send_report_mouse(int is_absolute, uint8_t buttons, int16_t x, int16_t y, int8_t wheel, int8_t pad)
+{
+    BaseType_t ret;
+
+    ret = xSemaphoreTake(s_send_report_sema, pdMS_TO_TICKS(CONFIG_MM_IO_TUSB_SEND_TIMEOUT_MS));
+
+    /* note: just warn user */
+    MM_CHECK_W(ret == pdTRUE);
+
+    if(is_absolute) {
+        return tud_hid_abs_mouse_report(REPORT_ID_MOUSE, buttons, x, y, wheel, pad) ? MM_OK : MM_FAIL;
+    } else {
+        return tud_hid_mouse_report(REPORT_ID_MOUSE, buttons, (int8_t) x, (int8_t) y, wheel, pad) ? MM_OK : MM_FAIL;
+    }
+}
+
+static void __send_report_handler(mm_event_t id, void *data)
+{
+    struct mm_hid_action_s *param = (struct mm_hid_action_s *) data;
+
+    if(param->type == MM_HID_ACTION_RELEASE) {
+        /* release pressed keys */
+
+        MM_LOG_I("Sending release keys");
+        __send_report_keyboard(0, NULL);
+        __send_report_mouse(0, 0, 0, 0, 0, 0);
+        __send_report_consumer(0);
+
+    } else if(param->type == MM_HID_ACTION_MOUSE) {
+        /* send a mouse event */
+
+        /* send the hid report */
+        MM_LOG_I("Sending mouse");
+        __send_report_mouse(param->u.mouse_report.is_absolute, param->u.mouse_report.buttons,
+                param->u.mouse_report.x, param->u.mouse_report.y,
+                param->u.mouse_report.wheel, param->u.mouse_report.pad);
+
+
+    } else if(param->type == MM_HID_ACTION_KEYBOARD) {
+        /* send a keyboard event */
+
+        MM_LOG_I("Sending keyboard");
+        __send_report_keyboard(param->u.keyboard_report.modifiers, param->u.keyboard_report.keycode);
+
+    } else if(param->type == MM_HID_ACTION_CONSUMER) {
+        /* send a keyboard event */
+
+        MM_LOG_I("Sending consumer");
+        __send_report_consumer(param->u.consumer_report.control);
+
+
+    } else {
+        MM_LOG_W("Could not parse struct mm_hid_action_s");
+    }
+}
+
+#endif
+
+/* note: freopen only affects newly spawned tasks (?) */
 
 #define __REDIRECT_STREAM(path, mode, stream) do { \
     MM_CHECK_W(fflush(stream) == 0); \
@@ -85,16 +157,14 @@ uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance)
     MM_CHECK_W(setvbuf(stream, NULL, _IONBF, 0) == 0); \
 } while(0)
 
-/* note: freopen only affects newly spawned tasks (?) */
-
-void redirect_streams_to_tinyusb(void)
+static void redirect_streams_to_tinyusb(void)
 {
     __REDIRECT_STREAM(VFS_TUSB_PATH_DEFAULT, "r", stdin);
     __REDIRECT_STREAM(VFS_TUSB_PATH_DEFAULT, "w", stdout);
     __REDIRECT_STREAM(VFS_TUSB_PATH_DEFAULT, "w", stderr);
 }
 
-void redirect_streams_to_default(void)
+static void redirect_streams_to_default(void)
 {
     const char default_console[] = "/dev/console";
     __REDIRECT_STREAM(default_console, "r", stdin);
@@ -102,7 +172,7 @@ void redirect_streams_to_default(void)
     __REDIRECT_STREAM(default_console, "w", stderr);
 }
 
-void redirect_streams_to_null(void)
+static void redirect_streams_to_null(void)
 {
     const char devnull[] = "/dev/null";
     __REDIRECT_STREAM(devnull, "r", stdin);
@@ -177,6 +247,8 @@ void mm_io_usb_init(void)
     /* start tinyusb stack */
 
     tusb_cfg = TINYUSB_DEFAULT_CONFIG();
+    tusb_cfg.descriptor.full_speed_config = descriptor_fs_cfg;
+    // tusb_cfg.descriptor.high_speed_config = descriptor_fs_cfg;
     tusb_cfg.descriptor.device = NULL;
     tusb_cfg.descriptor.string = string_descriptor;
     tusb_cfg.descriptor.string_count = sizeof(string_descriptor) / sizeof(string_descriptor[0]);
@@ -190,7 +262,24 @@ void mm_io_usb_init(void)
     MM_CHECK_E(esp_vfs_tusb_cdc_register(TTY_CDC_NUM, NULL) == ESP_OK);
 
     redirect_streams_to_tinyusb();
+
+    /* wait for tinyusb before continuing */
+    while(!tud_ready()) {
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+
     mm_log_resume();
+
+    #if CONFIG_MM_IO_ENABLE_USB_HID
+
+    s_send_report_sema = xSemaphoreCreateBinary();
+    MM_CHECK_E(s_send_report_sema != NULL);
+    /* semaphore starts unlocked */
+    xSemaphoreGive(s_send_report_sema);
+
+    mm_event_add_handler(MM_EVENT_SENDHID, __send_report_handler);
+
+    #endif
 
     MM_LOG_I("tinyusb stack initialized");
 }

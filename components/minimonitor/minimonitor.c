@@ -8,6 +8,7 @@
  */
 
 #include "minimonitor.h"
+#include "sdkconfig.h"
 
 #include <string.h>
 #include <sys/time.h>
@@ -22,6 +23,7 @@
 #include "mm_persist.h"
 #include "mm_conf.h"
 #include "mm_macros.h"
+#include "mm_hid_control.h"
 
 static int s_initialized = 0;
 static int s_started = 0;
@@ -94,6 +96,7 @@ void mm_init(void)
     struct timeval tv;
     char *buf;
     struct mm_sensor_meter_config_s config;
+    struct mm_hid_control_config_s hidconf;
 
     MM_CHECK_E(s_initialized == 0);
     MM_CHECK_E(mm_conf_initialized());
@@ -123,6 +126,13 @@ void mm_init(void)
     while(mm_sensor_fetch_meter_config(&config) == MM_OK) {
         mm_event_queue_confsensor(&config);
         config.index++;
+    }
+
+    /* restore hid controls */
+    hidconf.index = 0;
+    while(mm_hid_control_fetch_config(&hidconf) == MM_OK) {
+        mm_event_queue_confhid(&hidconf);
+        hidconf.index++;
     }
 
     s_initialized = 1;
@@ -209,7 +219,9 @@ void mm_confsensor(struct mm_sensor_meter_config_s *config)
 {
     char buf[MAX(CONFIG_MM_SENSOR_DESC_FMT_MAX_LEN, CONFIG_MM_SENSOR_PANEL_FMT_MAX_LEN)];
 
-    if(!MM_CHECK_W(config)) return;
+    if(!MM_CHECK_W(config)) {
+        return;
+    };
 
     /* parse format strings to accomodate decimal digits */
     strncpy(buf, config->fmt, sizeof(buf));
@@ -231,6 +243,26 @@ void mm_confsensor(struct mm_sensor_meter_config_s *config)
             config->threshold.low, config->threshold.high, config->color_arg, config->decimals, config->panel.wakeup_threshold, config->panel.fmt);
 
     mm_event_queue_confsensor(config);
+}
+
+void mm_confhid(struct mm_hid_control_config_s *config)
+{
+    if(!MM_CHECK_W(config)) {
+        return;
+    };
+
+    if(config->type != MM_HID_CONTROL_INVALID) {
+        MM_CHECK_W(mm_hid_control_store_config(config) == MM_OK);
+    } else {
+        mm_hid_control_erase_config(config->index);
+    }
+
+    MM_LOG_I("Setting HID config [%d]: %s", config->index,
+        config->type == MM_HID_CONTROL_AUTOCLICK ? "AUTOCLICK" :
+        config->type == MM_HID_CONTROL_MATRIX ? "MATRIX" :
+        config->type == MM_HID_CONTROL_TOUCHPAD ? "TOUCHPAD" : "INVALID");
+
+    mm_event_queue_confhid(config);
 }
 
 void mm_reboot(void)

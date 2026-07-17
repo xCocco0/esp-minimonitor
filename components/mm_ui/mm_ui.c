@@ -17,6 +17,7 @@
 #include "mm_macros.h"
 #include "mm_panic.h"
 #include "mm_port.h"
+#include "mm_hid_control.h"
 #include "mm_sensor.h"
 #include "mm_ui_screen.h"
 #include "mm_ui_layout.h"
@@ -123,11 +124,12 @@ static void __change_tile_handler(mm_event_t id, void *data)
         next_tile = cur_tile < (MM_UI_N_TILES-1) ? cur_tile+1 : (MM_UI_N_TILES-1);
     } else if(cmd == MM_TILE_HOME) {
         next_tile = ((void *) &mm_tiles.by_name.tile_main - (void *) &mm_tiles)/sizeof(mm_tiles.by_id[0]);
+        mm_ui_screen_switch(MM_SCREEN_MAIN);
     } else {
         return;
     }
 
-    mm_ui_screen_switch_tile_id(next_tile);
+    mm_ui_screen_switch_tile_id(next_tile, 1);
 }
 
 static void __set_backlight_handler(mm_event_t id, void *data)
@@ -183,6 +185,17 @@ static void __motion_gesture_handler(mm_event_t id, void *data)
     mm_ui_rotate_screen(rot);
 }
 
+static void __confhid_handler(mm_event_t id, void *data)
+{
+    struct mm_hid_control_config_s *param = (struct mm_hid_control_config_s *) data;
+
+    mm_widget_hidactions_control_delete(mm_widgets.hidactions, param->index);
+
+    if(param->type != MM_HID_CONTROL_INVALID) {
+        (void) mm_widget_hidactions_control_add(mm_widgets.hidactions, param);
+    }
+}
+
 static void __lv_log_puts(const char * buf)
 {
     MM_LOG_I("%s", buf);
@@ -226,6 +239,7 @@ void mm_ui_init(void)
     mm_event_add_handler(MM_EVENT_BSOD, __bsod_handler);
     mm_event_add_handler(MM_EVENT_PERIODIC, __tick_handler);
     mm_event_add_handler(MM_EVENT_MOTION, __motion_gesture_handler);
+    mm_event_add_handler(MM_EVENT_CONFHID, __confhid_handler);
 
     mm_ui_rotate_screen(mm_conf_get_as_integer(MM_CONF_PREFERRED_ROTATION));
 
