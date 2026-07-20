@@ -27,6 +27,7 @@
 
 static int s_initialized = 0;
 static int s_started = 0;
+static SemaphoreHandle_t s_wifistatus_sema = NULL;
 
 static void __settime_handler(mm_event_t id, void *data)
 {
@@ -134,6 +135,9 @@ void mm_init(void)
         mm_event_queue_confhid(&hidconf);
         hidconf.index++;
     }
+
+    s_wifistatus_sema = xSemaphoreCreateBinary();
+    MM_CHECK_E(s_wifistatus_sema != NULL);
 
     s_initialized = 1;
     MM_LOG_I("Minimonitor initialized");
@@ -308,11 +312,27 @@ void mm_setwifi(const char *ssid, const char *password)
     mm_event_queue_setwifi(ssid, password);
 }
 
-int mm_wifistatus()
+int mm_wifistatus(struct mm_wifi_info_s *wifi_info)
 {
-    // TODO
-    printf("wifi status\n");
-    return 0;
+    size_t size = sizeof(struct mm_wifi_info_s);
+    struct mm_data_request_s req = {
+        .sel = MM_DATA_WIFI_STATUS,
+        .ready_sema = s_wifistatus_sema,
+        .ptr = wifi_info,
+        .size = &size,
+    };
+
+    /* send request and wait of reply */
+    mm_event_queue_data_request(&req);
+    xSemaphoreTake(s_wifistatus_sema, portMAX_DELAY);
+
+    if(size >= sizeof(struct mm_wifi_info_s)) {
+        if(wifi_info->connected) {
+            return MM_YES;
+        }
+    }
+
+    return MM_NO;
 }
 
 void mm_tile_cycle(void)

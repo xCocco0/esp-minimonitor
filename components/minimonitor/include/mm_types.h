@@ -11,6 +11,7 @@
 #define __MM_TYPES_H
 
 #include <stdint.h>
+#include "freertos/FreeRTOS.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -65,6 +66,31 @@ typedef enum {
 struct mm_setwifi_param_s {
     const char *ssid;
     const char *password;
+};
+
+struct mm_wifi_info_s {
+    int connected;
+    uint8_t bssid[6];
+    uint8_t ssid[33];
+    int8_t rssi;
+    uint8_t ipv4[4];
+    /* TODO: ipv6 */
+};
+
+/* ================= data request ================= */
+
+enum mm_data_select_e {
+    MM_DATA_WIFI_STATUS = 1,
+    MM_DATA_ICON_LIST,
+};
+
+typedef enum mm_data_select_e mm_data_select_t;
+
+struct mm_data_request_s {
+    mm_data_select_t sel;
+    SemaphoreHandle_t ready_sema;
+    size_t *size; /**< bytes available at address ptr (not struct size). */
+    void *ptr;
 };
 
 #ifdef __cplusplus

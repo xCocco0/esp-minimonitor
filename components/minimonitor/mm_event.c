@@ -470,6 +470,40 @@ static void __mm_event_cleanup_sendhid(void *data)
     free(data);
 }
 
+/* --- MM_EVENT_DATA_REQUEST/REPLY --- */
+
+/**
+ * @brief Queue event to request data
+ */
+void mm_event_queue_data_request(struct mm_data_request_s *param)
+{
+    struct mm_data_request_s *data = (struct mm_data_request_s *) malloc(sizeof(struct mm_data_request_s));
+    MM_CHECK_MALLOC_E(data);
+
+    memcpy(data, param, sizeof(struct mm_data_request_s));
+    mm_event_queue(MM_EVENT_DATA_REQUEST, (void *) data);
+}
+
+static void __mm_event_cleanup_data_request(void *data)
+{
+    struct mm_data_request_s *d = (struct mm_data_request_s *) data;
+
+    if(MM_LIST_LEN(s_event_handler_list[MM_EVENT_DATA_REQUEST]) == 0) {
+        /* no handlers available to fill data */
+        /* note: this check must be here and not in mm_event_queue_data_request
+                 because this is synchronous with the handler callback. */
+        *d->size = 0;
+    }
+
+    /* note: we always give the samephore so even if no handlers
+       are implemented we won't get stuck waiting on the semaphore. */
+    if(d->ready_sema) {
+        xSemaphoreGive(d->ready_sema);
+    }
+
+    free(d);
+}
+
 /* --- */
 
 static void __mm_event_cleanup(mm_event_t id, void *data)
@@ -491,6 +525,7 @@ static void __mm_event_cleanup(mm_event_t id, void *data)
         case MM_EVENT_MOTION:          __mm_event_cleanup_motion(data);          break;
         case MM_EVENT_CONFHID:         __mm_event_cleanup_confhid(data);         break;
         case MM_EVENT_SENDHID:         __mm_event_cleanup_sendhid(data);         break;
+        case MM_EVENT_DATA_REQUEST:    __mm_event_cleanup_data_request(data);    break;
         default: break; /* default also covers EVENT_PERIODIC and EVENT_STARTUP */
     }
 }

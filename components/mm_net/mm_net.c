@@ -47,6 +47,34 @@ static void __setwifi_handler_update_credentials(mm_event_t id, void *data)
     mm_net_set_wifi_credentials(param->ssid, param->password);
 }
 
+static void __data_request_handler(mm_event_t id, void *data)
+{
+    wifi_ap_record_t ap_info;
+    esp_netif_ip_info_t ip_info;
+    struct mm_data_request_s *d = (struct mm_data_request_s *) data;
+    struct mm_wifi_info_s *info = d->ptr;
+
+    if(d->sel != MM_DATA_WIFI_STATUS) {
+        return;
+    }
+
+    MM_CHECK_E(*d->size >= sizeof(struct mm_wifi_info_s));
+
+    if(mm_wifi_getinfo(&ap_info, &ip_info) == MM_OK) {
+        info->connected = 1;
+        memcpy(info->ssid, &ap_info.ssid, sizeof(info->ssid));
+        memcpy(info->bssid, &ap_info.bssid, sizeof(info->bssid));
+        info->ipv4[0] = esp_ip4_addr1(&ip_info.ip);
+        info->ipv4[1] = esp_ip4_addr2(&ip_info.ip);
+        info->ipv4[2] = esp_ip4_addr3(&ip_info.ip);
+        info->ipv4[3] = esp_ip4_addr4(&ip_info.ip);
+        info->rssi = ap_info.rssi;
+    } else {
+        info->connected = 0;
+    }
+
+    *d->size = sizeof(struct mm_wifi_info_s);
+}
 
 void mm_net_init(void)
 {
@@ -62,6 +90,7 @@ void mm_net_init(void)
     mm_event_add_handler(MM_EVENT_SETWIFI,       __setwifi_handler_update_credentials);
     mm_event_add_handler(MM_EVENT_SNTPTRIGGER,   __sntptrigger_handler);
     mm_event_add_handler(MM_EVENT_SETHOSTNAME,   __sethostname_handler_refresh_mdns);
+    mm_event_add_handler(MM_EVENT_DATA_REQUEST,  __data_request_handler);
 
     s_initialized = 1;
     MM_LOG_I("Network initialized");

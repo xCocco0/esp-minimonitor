@@ -51,7 +51,7 @@ void mm_sethostname(const char *hostname);
 size_t mm_gethostname(const char *hostname, size_t size);
 void mm_settimezone(const char *tz);
 void mm_setwifi(const char *ssid, const char *password);
-int mm_wifistatus(void);
+int mm_wifistatus(struct mm_wifi_info_s *wifi_info);
 void mm_tile_cycle(void);
 void mm_tile_left(void);
 void mm_tile_right(void);

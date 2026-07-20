@@ -637,12 +637,26 @@ static inline esp_err_t __register_wifistatus(void)
 static int __wifistatus_cmd(int argc, char **argv)
 {
     int ret;
+    struct mm_wifi_info_s info;
 
-    ret = mm_wifistatus();
+    ret = mm_wifistatus(&info);
 
-    /* TODO: implement this */
-    printf("Not yet implemented.\n");
-    (void) ret;
+    if(ret == MM_YES) {
+        /*
+            int connected;
+        uint8_t bssid[6];
+        uint8_t ssid[33];
+        int8_t rssi;
+        uint8_t ipv4[4];
+        */
+        printf("STATUS: Connected\n");
+        printf("SSID:   %s [%02x:%02x:%02x:%02x:%02x:%02x]\n", info.ssid,
+                info.bssid[0], info.bssid[1], info.bssid[2], info.bssid[3], info.bssid[4], info.bssid[5]);
+        printf("IP:     %d.%d.%d.%d\n", info.ipv4[0], info.ipv4[1], info.ipv4[2], info.ipv4[3]);
+        printf("RSSI:   %"PRId8"\n", info.rssi);
+    } else {
+        printf("STATUS: Not connected\n");
+    }
 
     return 0;
 }

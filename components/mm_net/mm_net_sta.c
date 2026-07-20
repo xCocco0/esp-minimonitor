@@ -57,15 +57,15 @@
 #define WIFI_CONNECTED_BIT    BIT0
 #define WIFI_DISCONNECTED_BIT BIT1
 
-#define WIFI_DISCONNECT_NOTIFY_ICON "wifi_slash"
+#define WIFI_DISCONNECT_NOTIFY_ICON "wifi_slash" /* TODO */
 #define WIFI_DISCONNECT_NOTIFY_NAME "wifi_disco"
 
 static int s_initalized = 0;
 static TimerHandle_t s_reconnect_timer;
 static EventGroupHandle_t s_wifi_event_group;
-static esp_netif_ip_info_t ipinfo;
+static esp_netif_ip_info_t s_ipinfo;
 static SemaphoreHandle_t s_connect_sema;
-static esp_netif_t* netif;
+static esp_netif_t* s_netif;
 
 static void __connect_timer_cb(TimerHandle_t timer)
 {
@@ -161,7 +161,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 
         case IP_EVENT_STA_GOT_IP:
             ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
-            ipinfo = event->ip_info;
+            s_ipinfo = event->ip_info;
             MM_LOG("got ip:" IPSTR, IP2STR(&event->ip_info.ip));
             mm_snooze(WIFI_DISCONNECT_NOTIFY_NAME);
             xEventGroupClearBits(s_wifi_event_group, WIFI_DISCONNECTED_BIT);
@@ -203,11 +203,11 @@ void mm_net_sta_start(void)
 
     ret = esp_event_loop_create_default();
     MM_CHECK_E(ret == ESP_OK);
-    netif = esp_netif_create_default_wifi_sta();
+    s_netif = esp_netif_create_default_wifi_sta();
 
     hostname = mm_conf_get_with_malloc(MM_CONF_HOSTNAME);
     MM_CHECK_MALLOC_E(hostname);
-    esp_netif_set_hostname(netif, hostname);
+    esp_netif_set_hostname(s_netif, hostname);
     free(hostname);
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
@@ -240,4 +240,23 @@ void mm_net_sta_start(void)
     MM_CHECK_E(ret == ESP_OK);
 
     s_initalized = 1;
+}
+
+mm_err_t mm_wifi_getinfo(wifi_ap_record_t *ap_info, esp_netif_ip_info_t *ip_info)
+{
+    esp_err_t ret;
+
+    if(xEventGroupGetBits(s_wifi_event_group) & WIFI_CONNECTED_BIT) {
+
+        ret = esp_wifi_sta_get_ap_info(ap_info);
+        if(MM_CHECK_W(ret != ESP_OK)) {
+            return MM_FAIL;
+        }
+
+        *ip_info = s_ipinfo;
+
+        return MM_OK;
+    }
+
+    return MM_FAIL;
 }

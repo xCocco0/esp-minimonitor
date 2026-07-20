@@ -41,8 +41,9 @@ typedef enum {
     MM_EVENT_BSOD,                /**< A panic was detected */
     MM_EVENT_STARTUP,             /**< Minimonitor started up */
     MM_EVENT_MOTION,              /**< IMU motion detected */
-    MM_EVENT_CONFHID,             /**<  */
-    MM_EVENT_SENDHID,             /**<  */
+    MM_EVENT_CONFHID,             /**< Configure HID controls */
+    MM_EVENT_SENDHID,             /**< Send HID event */
+    MM_EVENT_DATA_REQUEST,        /**< */
 
     MM_EVENT_MAX,
 } mm_event_t;
@@ -78,6 +79,7 @@ void mm_event_queue_bsod(struct mm_panic_info_s *param);
 void mm_event_queue_motion(mm_motion_t motion);
 void mm_event_queue_confhid(struct mm_hid_control_config_s *param);
 void mm_event_queue_sendhid(struct mm_hid_action_s *param);
+void mm_event_queue_data_request(struct mm_data_request_s *param);
 
 #ifdef __cplusplus
 }
