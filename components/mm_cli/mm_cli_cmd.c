@@ -10,6 +10,7 @@
 #include "mm_cli_cmd.h"
 
 #include <string.h>
+#include "esp_app_desc.h"
 #include "esp_console.h"
 #include "argtable3/argtable3.h"
 #include "sdkconfig.h"
@@ -17,6 +18,7 @@
 #include "mm_conf.h"
 #include "mm_sensor.h"
 #include "mm_macros.h"
+#include "mm_icon.h"
 
 static void __print_usage(FILE *f, const char *header, const char *prefix, void *argtable)
 {
@@ -610,53 +612,6 @@ static int __setwifi_cmd(int argc, char **argv)
     mm_setwifi(ssid, password);
 
     printf("wifi credentials updated. ret=%d\n", ret);
-
-    return 0;
-}
-
-#endif
-
-/* ================= wifistatus cmd ================= */
-#if 1
-
-static int __wifistatus_cmd(int argc, char **argv);
-
-static inline esp_err_t __register_wifistatus(void)
-{
-    esp_console_cmd_t wifistatus_cmd_config = {
-        .command = "wifistatus",
-        .help = "Show WiFi status.",
-        .hint = NULL,
-        .func = &__wifistatus_cmd,
-        .argtable = NULL,
-    };
-
-    return esp_console_cmd_register(&wifistatus_cmd_config);
-}
-
-static int __wifistatus_cmd(int argc, char **argv)
-{
-    int ret;
-    struct mm_wifi_info_s info;
-
-    ret = mm_wifistatus(&info);
-
-    if(ret == MM_YES) {
-        /*
-            int connected;
-        uint8_t bssid[6];
-        uint8_t ssid[33];
-        int8_t rssi;
-        uint8_t ipv4[4];
-        */
-        printf("STATUS: Connected\n");
-        printf("SSID:   %s [%02x:%02x:%02x:%02x:%02x:%02x]\n", info.ssid,
-                info.bssid[0], info.bssid[1], info.bssid[2], info.bssid[3], info.bssid[4], info.bssid[5]);
-        printf("IP:     %d.%d.%d.%d\n", info.ipv4[0], info.ipv4[1], info.ipv4[2], info.ipv4[3]);
-        printf("RSSI:   %"PRId8"\n", info.rssi);
-    } else {
-        printf("STATUS: Not connected\n");
-    }
 
     return 0;
 }
@@ -1287,6 +1242,127 @@ static int __rotate_cmd(int argc, char **argv)
 
 #endif
 
+/* ================= info cmd ================= */
+#if 1
+
+static struct {
+    struct arg_str *cmd;
+    struct arg_end *end;
+} __info_opt;
+
+static int __info_cmd(int argc, char **argv);
+
+static inline esp_err_t __register_info(void)
+{
+    esp_console_cmd_t info_cmd_config = {
+        .command = "info",
+        .help = "Get system information",
+        .hint = NULL,
+        .func = &__info_cmd,
+        .argtable = &__info_opt,
+    };
+
+    __info_opt.cmd = arg_strn(NULL, NULL, "<subcmd>", 0, 1, "Subcommand (icons|keys|network).");
+    __info_opt.end = arg_end(0);
+
+    return esp_console_cmd_register(&info_cmd_config);
+}
+
+static int __info_icons_cmd(int argc, char **argv)
+{
+    mm_icon_builtin_t icon;
+    printf("Available icons (builtin):\n");
+    printf("%-20s %6s\n", "[Icon name]", "[Size]");
+    for_each_icon(icon) {
+        printf("%-20s %6d\n", mm_icon_get_string_name(icon), mm_icon_get_size(icon));
+    }
+    return 0;
+}
+
+static int __info_keys_cmd(int argc, char **argv)
+{
+    #if CONFIG_MM_IO_ENABLE_USB_HID
+    printf("%11c %11s %28s\n", ' ', "[Key Code]", "[Full Name]");
+    for(int i = 1; i < MM_KEY_ENUM_MAX; ++i) {
+        if(MM_KEY_IS_KEYBOARD(i)) {
+            printf("%-11s %11s %28s\n", "[Keyboard]", MM_KEY_TO_STR(i), MM_KEY_TO_LONG_STR(i));
+        }
+        if(MM_KEY_IS_MOUSE(i)) {
+            printf("%-11s %11s %28s\n", "[Mouse]", MM_KEY_TO_STR(i), MM_KEY_TO_LONG_STR(i));
+        }
+        if(MM_KEY_IS_MODIFIER(i)) {
+            printf("%-11s %11s %28s\n", "[Modifier]", MM_KEY_TO_STR(i), MM_KEY_TO_LONG_STR(i));
+        }
+        if(MM_KEY_IS_CONSUMER(i)) {
+            printf("%-11s %11s %28s\n", "[Consumer]", MM_KEY_TO_STR(i), MM_KEY_TO_LONG_STR(i));
+        }
+    }
+    printf("\ne.g.: Shift+Ctrl+MouseLeft, MouseBack, KPad++KPad-\n");
+    #else
+    printf("USB HID is disabled.");
+    #endif
+    return 0;
+}
+
+static int __info_network_cmd(int argc, char **argv)
+{
+    int ret;
+    struct mm_wifi_info_s info;
+
+    ret = mm_wifistatus(&info);
+
+    if(ret == MM_YES) {
+        printf("Status: Connected\n");
+        printf("SSID:   %s [%02x:%02x:%02x:%02x:%02x:%02x]\n", info.ssid,
+                info.bssid[0], info.bssid[1], info.bssid[2], info.bssid[3], info.bssid[4], info.bssid[5]);
+        printf("IP:     %d.%d.%d.%d\n", info.ipv4[0], info.ipv4[1], info.ipv4[2], info.ipv4[3]);
+        printf("RSSI:   %"PRId8"\n", info.rssi);
+    } else {
+        printf("Status: Not connected\n");
+    }
+
+    return 0;
+}
+
+static int __info_cmd(int argc, char **argv)
+{
+    int ret;
+
+    ret = arg_parse(argc, argv, (void **) &__info_opt);
+    if (ret != 0) {
+        arg_print_errors(stderr, __info_opt.end, argv[0]);
+        return 1;
+    }
+
+    if(__info_opt.cmd->count > 0) {
+        /* call subcommand */
+        const char * const mode = __info_opt.cmd->sval[0];
+        if(strcmp(mode, "icons") == 0) {
+            ret = __info_icons_cmd(argc - 1, &argv[1]);
+        } else if(strcmp(mode, "keys") == 0) {
+            ret = __info_keys_cmd(argc - 1, &argv[1]);
+        } else if(strcmp(mode, "network") == 0) {
+            ret = __info_network_cmd(argc - 1, &argv[1]);
+        }
+    } else {
+        /* not subcommand: print generic infos */
+        printf(MINIMONITOR_ASCII_ART_STR "\n");
+        printf("\n");
+        printf("MiniMonitor v%s\n", esp_app_get_description()->version);
+        printf("\n");
+        printf("Compiled: %s, %s\n", __DATE__, __TIME__);
+        printf("Target board: %s\n", CONFIG_MM_PORT_TARGET_BOARD);
+        printf("Current time: ");
+        __date_cmd(0, NULL);
+        /* TODO: add more */
+        ret = 0;
+    }
+
+    return 0;
+}
+
+#endif
+
 /*==================================*/
 
 void mm_cli_cmd_register_all(void)
@@ -1295,7 +1371,6 @@ void mm_cli_cmd_register_all(void)
     MM_CHECK_E(__register_setsensor() == ESP_OK);
     MM_CHECK_E(__register_sensorconfig() == ESP_OK);
     MM_CHECK_E(__register_setwifi() == ESP_OK);
-    MM_CHECK_E(__register_wifistatus() == ESP_OK);
     MM_CHECK_E(__register_reboot() == ESP_OK);
     MM_CHECK_E(__register_date() == ESP_OK);
     MM_CHECK_E(__register_sntpsync() == ESP_OK);
@@ -1309,4 +1384,5 @@ void mm_cli_cmd_register_all(void)
     #if CONFIG_MM_IO_ENABLE_USB_HID
     MM_CHECK_E(__register_hidconfig() == ESP_OK);
     #endif
+    MM_CHECK_E(__register_info() == ESP_OK);
 }

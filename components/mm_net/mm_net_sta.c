@@ -250,7 +250,7 @@ mm_err_t mm_wifi_getinfo(wifi_ap_record_t *ap_info, esp_netif_ip_info_t *ip_info
     if(xEventGroupGetBits(s_wifi_event_group) & WIFI_CONNECTED_BIT) {
 
         ret = esp_wifi_sta_get_ap_info(ap_info);
-        if(MM_CHECK_W(ret != ESP_OK)) {
+        if(!MM_CHECK_W(ret == ESP_OK)) {
             return MM_FAIL;
         }
 

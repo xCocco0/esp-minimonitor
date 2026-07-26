@@ -11,6 +11,13 @@
 #ifndef __MINIMONITOR_H
 #define __MINIMONITOR_H
 
+/* Small by Glenn Chappell 4/93 (generated with https://patorjk.com/software/taag) */
+#define MINIMONITOR_ASCII_ART_STR \
+"  __  __ _      _ __  __          _ _\n" \
+" |  \\/  (_)_ _ (_)  \\/  |___ _ _ (_) |_ ___ _ _\n" \
+" | |\\/| | | ' \\| | |\\/| / _ \\ ' \\| |  _/ _ \\ '_|\n" \
+" |_|  |_|_|_||_|_|_|  |_\\___/_||_|_|\\__\\___/_|" \
+
 #ifdef __cplusplus
 extern "C"
 {
