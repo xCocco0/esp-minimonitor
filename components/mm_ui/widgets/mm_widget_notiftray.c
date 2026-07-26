@@ -18,6 +18,7 @@
 #include "mm_style.h"
 #include "mm_ui_screen.h"
 
+#define __ICON_DEFAULT_WIDTH (MM_IMG_SRC_BELL->img_dsc->header.w)
 
 #if CONFIG_MM_PORT_HAS_TOUCHSCREEN
 
@@ -45,7 +46,7 @@ mm_widget_notiftray_t *mm_widget_notiftray_create(lv_obj_t *parent)
     lv_obj_set_style_flex_main_place(obj, LV_FLEX_ALIGN_SPACE_EVENLY, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_flex_track_place(obj, LV_FLEX_ALIGN_START, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_pad_all(obj, MM_PORT_BORDER_INNER/2, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_pad_column(obj, (MM_ICON_WIDTH*MM_PORT_NOTIF_ICON_SCALE/256)/4, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_column(obj, (__ICON_DEFAULT_WIDTH*MM_PORT_NOTIF_ICON_SCALE/256)/4, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     #if CONFIG_MM_PORT_HAS_TOUCHSCREEN
     lv_obj_clear_flag(obj, LV_OBJ_FLAG_EVENT_BUBBLE);
@@ -66,7 +67,7 @@ int mm_widget_notiftray_n_icons(mm_widget_notiftray_t *widget)
     return lv_obj_get_child_cnt(mm_widgets.tray_notif->container);
 }
 
-mm_widget_notiftray_icon_t *mm_widget_notiftray_icon_create(mm_widget_notiftray_t *widget, const char *name, const mm_icon_t *img, int opt)
+mm_widget_notiftray_icon_t *mm_widget_notiftray_icon_create(mm_widget_notiftray_t *widget, const char *name, const mm_img_src_t *img, int opt)
 {
     MM_CHECK_E(name != NULL);
     MM_CHECK_E(img != NULL);
@@ -89,10 +90,10 @@ mm_widget_notiftray_icon_t *mm_widget_notiftray_icon_create(mm_widget_notiftray_
     lv_obj_set_style_img_recolor(obj, mm_style_color_text(), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_img_recolor_opa(obj, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_align(obj, LV_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_max_height(obj, 2+MM_ICON_WIDTH*MM_PORT_NOTIF_ICON_SCALE/256, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_max_width(obj, 2+MM_ICON_WIDTH*MM_PORT_NOTIF_ICON_SCALE/256, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_max_height(obj, 2+__ICON_DEFAULT_WIDTH*MM_PORT_NOTIF_ICON_SCALE/256, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_max_width(obj, 2+__ICON_DEFAULT_WIDTH*MM_PORT_NOTIF_ICON_SCALE/256, LV_PART_MAIN | LV_STATE_DEFAULT);
     #if CONFIG_MM_UI_ZOOM_IMAGE
-    MM_IMAGE_SCALE_TO_SIZE(obj, MM_ICON_WIDTH*MM_PORT_NOTIF_ICON_SCALE/256);
+    MM_IMAGE_SCALE_TO_SIZE(obj, __ICON_DEFAULT_WIDTH*MM_PORT_NOTIF_ICON_SCALE/256);
     #endif
     lv_obj_add_flag(obj, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
 

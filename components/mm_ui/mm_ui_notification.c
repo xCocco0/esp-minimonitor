@@ -11,7 +11,7 @@
 #include <limits.h>
 #include "mm_err.h"
 #include "mm_ui_notification.h"
-#include "mm_icon.h"
+#include "mm_img.h"
 #include "mm_widgets.h"
 #include "mm_ui_state.h"
 
@@ -54,7 +54,7 @@ static void __mm_notif_delete(mm_notif_t *n)
 int mm_ui_notif_post(const char *name, const char* icon_name, const char* msg, int opt)
 {
     struct mm_notif_s *n;
-    void *icon;
+    const mm_img_src_t *icon;
     mm_widget_notiftray_icon_t *nico = NULL;
     int count = 1;
 
@@ -69,7 +69,7 @@ int mm_ui_notif_post(const char *name, const char* icon_name, const char* msg, i
     n = __mm_notif_create(name, msg);
     n->opt = opt;
 
-    icon = mm_icon_by_name(icon_name);
+    icon = mm_img_src_nofail(icon_name);
 
     /* simply append to list regardless of opt */
     n->board_entry = mm_widget_notifboard_entry_create(mm_widgets.board_notif, n->msg, icon);

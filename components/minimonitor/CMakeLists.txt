@@ -3,10 +3,11 @@ idf_component_register(SRCS
                     "mm_event.c"
                     "mm_sensor.c"
                     "mm_hid_control.c"
+                    "mm_icon.c"
                     "mm_touchpad.c"
                     "minimonitor.c"
                     PRIV_REQUIRES esp_event nvs_flash mm_utils espcoredump
-                    INCLUDE_DIRS "include" "include/keys"
+                    INCLUDE_DIRS "include" "include/keys" "include/icons"
                     PRIV_INCLUDE_DIRS ""
 )
 

@@ -157,6 +157,18 @@ menu "Minimonitor"
 
     endmenu
 
+    choice MM_ICON_SET
+        prompt "Icon set to compile"
+        default MM_ICON_SET_ALL
+        help
+            Choose to compile all icons or a reduced amount to save flash memory.
+
+        config MM_ICON_SET_ALL
+            bool "All (recommended)"
+        config MM_ICON_SET_MINIMAL
+            bool "Minimal"
+
+    endchoice
 
     # NOTE: global level is set by CONFIG_LOG_MAXIMUM_LEVEL
     config MM_LOG_LEVEL

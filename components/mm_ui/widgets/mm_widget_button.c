@@ -17,7 +17,7 @@
 #include "mm_font.h"
 #include "mm_ui_screen.h"
 
-static inline lv_obj_t *__add_icon(lv_obj_t *parent, mm_icon_t *ico)
+static inline lv_obj_t *__add_icon(lv_obj_t *parent, const mm_img_src_t *ico)
 {
     lv_obj_t *obj = lv_img_create(parent);
     lv_obj_center(obj);
@@ -44,7 +44,7 @@ static inline lv_obj_t *__add_label(lv_obj_t *parent, const char *text)
     return obj;
 }
 
-mm_widget_button_t *mm_widget_button_create(lv_obj_t *parent, mm_icon_t *ico, uint32_t color)
+mm_widget_button_t *mm_widget_button_create(lv_obj_t *parent, const mm_img_src_t *ico, uint32_t color)
 {
     struct mm_widget_button_s *m;
     lv_obj_t *obj;
@@ -101,7 +101,7 @@ mm_widget_button_t *mm_widget_button_create_with_text(lv_obj_t *parent, const ch
     return m;
 }
 
-mm_widget_button_t *mm_widget_button_create_checkable(lv_obj_t *parent, mm_icon_t *ico, uint32_t color, int initial_state)
+mm_widget_button_t *mm_widget_button_create_checkable(lv_obj_t *parent, const mm_img_src_t *ico, uint32_t color, int initial_state)
 {
     struct mm_widget_button_s *m = mm_widget_button_create(parent, ico, color);
 

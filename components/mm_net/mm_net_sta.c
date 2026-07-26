@@ -15,6 +15,7 @@
 #include "minimonitor.h"
 #include "mm_conf.h"
 #include "mm_err.h"
+#include "mm_icon.h"
 
 #if CONFIG_MM_NET_WIFI_WPA3_SAE_PWE_HUNT_AND_PECK
     #define WIFI_SAE_MODE       WPA3_SAE_PWE_HUNT_AND_PECK
@@ -57,7 +58,7 @@
 #define WIFI_CONNECTED_BIT    BIT0
 #define WIFI_DISCONNECTED_BIT BIT1
 
-#define WIFI_DISCONNECT_NOTIFY_ICON "wifi_slash" /* TODO */
+#define WIFI_DISCONNECT_NOTIFY_ICON MM_ICON_WIFI_SLASH
 #define WIFI_DISCONNECT_NOTIFY_NAME "wifi_disco"
 
 static int s_initalized = 0;
@@ -145,8 +146,8 @@ static void event_handler(void* arg, esp_event_base_t event_base,
             break;
 
         case WIFI_EVENT_STA_DISCONNECTED:
-            MM_LOG("Failed to connect to the AP");
-            mm_notify(WIFI_DISCONNECT_NOTIFY_NAME, WIFI_DISCONNECT_NOTIFY_ICON,
+            MM_LOG_W("Failed to connect to the AP");
+            mm_notify(WIFI_DISCONNECT_NOTIFY_NAME, mm_icon_get_string_name(WIFI_DISCONNECT_NOTIFY_ICON),
                     0x0, 0, "Failed to connect to the AP", MM_NOTIFY_REPLACE, 1);
             xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
             xEventGroupSetBits(s_wifi_event_group, WIFI_DISCONNECTED_BIT);
@@ -162,7 +163,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
         case IP_EVENT_STA_GOT_IP:
             ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
             s_ipinfo = event->ip_info;
-            MM_LOG("got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+            MM_LOG_I("got ip:" IPSTR, IP2STR(&event->ip_info.ip));
             mm_snooze(WIFI_DISCONNECT_NOTIFY_NAME);
             xEventGroupClearBits(s_wifi_event_group, WIFI_DISCONNECTED_BIT);
             xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);

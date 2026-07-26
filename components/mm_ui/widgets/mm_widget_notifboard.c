@@ -77,7 +77,7 @@ mm_widget_notifboard_t *mm_widget_notifboard_create(lv_obj_t *parent)
     MM_STYLE_EMPTY_CONT(obj);
     lv_obj_set_style_pad_all(obj, MM_PORT_BORDER_INNER, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-    btn = mm_widget_button_create(obj, MM_ICON_TRASH, CONFIG_MM_UI_BTN_SNOOZE_COLOR);
+    btn = mm_widget_button_create(obj, MM_IMG_SRC_TRASH, CONFIG_MM_UI_BTN_SNOOZE_COLOR);
     lv_obj_add_event_cb(btn->button, __event_clear_button_cb, LV_EVENT_CLICKED, NULL);
 
     #else
@@ -95,9 +95,10 @@ void mm_widget_notifboard_delete(mm_widget_notifboard_t *widget)
     free(widget);
 }
 
-mm_widget_notifboard_entry_t *mm_widget_notifboard_entry_create(mm_widget_notifboard_t *widget, const char *text, const mm_icon_t *img)
+mm_widget_notifboard_entry_t *mm_widget_notifboard_entry_create(mm_widget_notifboard_t *widget, const char *text, const mm_img_src_t *img)
 {
     struct mm_widget_notifboard_entry_s *m;
+    uint32_t img_size;
 
     m = (struct mm_widget_notifboard_entry_s *) malloc(sizeof(struct mm_widget_notifboard_entry_s));
     MM_CHECK_MALLOC_E(m);
@@ -125,6 +126,12 @@ mm_widget_notifboard_entry_t *mm_widget_notifboard_entry_create(mm_widget_notifb
     #endif
 
     /* icon */
+    if(lv_img_src_get_type(img) == LV_IMG_SRC_VARIABLE) {
+        img_size = MAX(((lv_img_header_t *) img)->w, ((lv_img_header_t *) img)->h);
+    } else {
+        img_size = MM_IMG_SRC_BELL->img_dsc->header.w;
+    }
+
     obj = lv_img_create(m->panel);
     m->icon = obj;
     //lv_obj_set_size(obj, MM_PORT_FONT_SIZE_VERY_SMALL*3/2, MM_PORT_FONT_SIZE_VERY_SMALL*3/2);
@@ -132,10 +139,10 @@ mm_widget_notifboard_entry_t *mm_widget_notifboard_entry_create(mm_widget_notifb
     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
     lv_obj_set_style_img_recolor(obj, mm_style_color_text(), LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_set_style_img_recolor_opa(obj, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_max_height(obj, 2+MM_ICON_WIDTH*MM_PORT_NOTIF_ICON_SCALE/256, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_max_width(obj, 2+MM_ICON_WIDTH*MM_PORT_NOTIF_ICON_SCALE/256, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_max_height(obj, 2+img_size*MM_PORT_NOTIF_ICON_SCALE/256, LV_PART_MAIN | LV_STATE_DEFAULT);
+    lv_obj_set_style_max_width(obj, 2+img_size*MM_PORT_NOTIF_ICON_SCALE/256, LV_PART_MAIN | LV_STATE_DEFAULT);
     #if CONFIG_MM_UI_ZOOM_IMAGE
-    MM_IMAGE_SCALE_TO_SIZE(obj, MM_ICON_WIDTH*MM_PORT_NOTIF_ICON_SCALE/256);
+    MM_IMAGE_SCALE_TO_SIZE(obj, img_size*MM_PORT_NOTIF_ICON_SCALE/256);
     #endif
 
     /* label */

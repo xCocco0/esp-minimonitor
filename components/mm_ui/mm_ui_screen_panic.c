@@ -8,6 +8,7 @@
  */
 
 #include "mm_ui_screen.h"
+#include "sdkconfig.h"
 
 #include "mm_err.h"
 #include "mm_port_ui_customization.h"

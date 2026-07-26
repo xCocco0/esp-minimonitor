@@ -67,6 +67,7 @@ if [ 1 ]; then
 
 for file in $images
 do
+    continue
 	name=$(echo $(basename $file) | grep -o '^[^\.]*')
 	echo $name
 
@@ -87,32 +88,6 @@ fi
 
 ### PRINT C CODE SNIPPETS ###
 
-echo "======================= MM_ICON_* macros ========================="
-
-for file in $images
-do
-	name=$(echo $(basename $file) | grep -o '^[^\.]*')
-	printf "#define MM_ICON_%-20s ((mm_icon_t *) &mm_icon_%s)\n" "$(echo $name | tr 'a-z' 'A-Z')" "$name"
-done
-
-echo "================== name/image array definition= =================="
-
-echo 'static const struct __name_and_img name_and_img[] = {'
-for file in $images
-do
-	name=$(echo $(basename $file) | grep -o '^[^\.]*')
-	printf "    {.name = %-22s, .img_dsc = &mm_icon_%-20s},\n" "\"$name\"" "$name"
-done
-echo '};'
-
-echo "================= mm_icon_* extern declarations =================="
-
-for file in $images
-do
-	name=$(echo $(basename $file) | grep -o '^[^\.]*')
-	printf "extern lv_img_dsc_t mm_icon_%s;\n" "$name"
-done
-
 echo "==================== CMake sources variable ======================"
 
 echo "set(SRC_IMAGES"
@@ -123,4 +98,17 @@ do
 done
 echo ")"
 
+echo "==================== CMake sources variable ======================"
+
+echo "/*            NAME                 STRING NAME          WIDTH RESIZEABLE */"
+for file in $images
+do
+	name=$(echo $(basename $file) | grep -o '^[^\.]*')
+    enum_name=$(echo $name | tr "[:lower:]" "[:upper:]")
+	printf "FOR_EACH_ICON(%-19s, %-19s, %-2d, %-2d)\n" "$enum_name" "$name" $SIZE 1
+done
+
 echo "=================================================================="
+
+#
+#

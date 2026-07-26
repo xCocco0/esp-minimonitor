@@ -1,0 +1,7 @@
+#if CONFIG_MM_ICON_SET_ALL
+#include "mm_icons_full.def"
+#elif CONFIG_MM_ICON_SET_MINIMAL
+#include "mm_icons_minimal.def"
+#else
+#error "CONFIG_MM_ICON_SET_* not found. Did you forget to include `sdkconfig.h`?"
+#endif

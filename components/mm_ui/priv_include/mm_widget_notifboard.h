@@ -12,7 +12,7 @@
 
 #include <lvgl.h>
 #include "sdkconfig.h"
-#include "mm_icon.h"
+#include "mm_img.h"
 
 #ifdef __cplusplus
 extern "C"
@@ -37,7 +37,7 @@ typedef struct mm_widget_notifboard_entry_s mm_widget_notifboard_entry_t;
 mm_widget_notifboard_t *mm_widget_notifboard_create(lv_obj_t *parent);
 void mm_widget_notifboard_delete(mm_widget_notifboard_t *widget);
 
-mm_widget_notifboard_entry_t *mm_widget_notifboard_entry_create(mm_widget_notifboard_t *widget, const char *text, const mm_icon_t *img);
+mm_widget_notifboard_entry_t *mm_widget_notifboard_entry_create(mm_widget_notifboard_t *widget, const char *text, const mm_img_src_t *img);
 void mm_widget_notifboard_entry_delete(mm_widget_notifboard_entry_t *widget);
 
 void mm_widget_notifboard_entry_set_text(mm_widget_notifboard_entry_t* widget, const char* text);

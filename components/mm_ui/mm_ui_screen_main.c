@@ -57,9 +57,9 @@ static void __button_enablenotif_toggle(lv_event_t *e)
         int dnd = !pressed;
 
         if(pressed) {
-                lv_img_set_src(btn->icon, MM_ICON_BELL);
+                lv_img_set_src(btn->icon, MM_IMG_SRC_BELL);
         } else {
-                lv_img_set_src(btn->icon, MM_ICON_BELL_SLASH);
+                lv_img_set_src(btn->icon, MM_IMG_SRC_BELL_SLASH);
         }
 
         mm_ui_state.dnd_enabled = dnd;
@@ -143,7 +143,7 @@ void mm_ui_screen_create_main()
 
         struct tm time;
         char *bg_img_name;
-        mm_icon_t *bg_img;
+        const mm_img_src_t *bg_img;
 
         mm_gettime(&time);
 
@@ -156,7 +156,7 @@ void mm_ui_screen_create_main()
         bg_img_name = (char *) mm_conf_get_with_malloc(MM_CONF_BACKGROUND_IMAGE);
         if(bg_img_name) {
                 if(bg_img_name[0] != '\0') {
-                        bg_img = mm_icon_search_in_sdcard(bg_img_name);
+                        bg_img = mm_img_src(bg_img_name);
                         if(bg_img) {
                                 lv_obj_set_style_bg_img_src(screen_main, bg_img, LV_PART_MAIN | LV_STATE_DEFAULT);
                         } else {
@@ -347,7 +347,7 @@ void mm_ui_screen_create_main()
         /* icon_brightness_low */
         icon_brightness_low = lv_img_create(panel_bright);
         lv_obj_set_size(icon_brightness_low, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-        lv_img_set_src(icon_brightness_low, MM_ICON_EMPTY_SUN);
+        lv_img_set_src(icon_brightness_low, MM_IMG_SRC_EMPTY_SUN);
         lv_obj_set_style_img_recolor(icon_brightness_low, mm_style_color_text(), LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_img_recolor_opa(icon_brightness_low, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
         #if CONFIG_MM_UI_ZOOM_IMAGE
@@ -369,7 +369,7 @@ void mm_ui_screen_create_main()
         /* icon_brightness_high */
         icon_brightness_high = lv_img_create(panel_bright);
         lv_obj_set_size(icon_brightness_high, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-        lv_img_set_src(icon_brightness_high, MM_ICON_SUN);
+        lv_img_set_src(icon_brightness_high, MM_IMG_SRC_SUN);
         lv_obj_set_style_img_recolor(icon_brightness_high, mm_style_color_text(), LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_img_recolor_opa(icon_brightness_high, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
         #if CONFIG_MM_UI_ZOOM_IMAGE
@@ -394,15 +394,15 @@ void mm_ui_screen_create_main()
 
         /* control buttons */
         mm_widget_button_t *btn_shutdown, *btn_reboot, *btn_enablenotif, *btn_rot;
-        btn_shutdown = mm_widget_button_create(panel_control_btn, MM_ICON_POWER, CONFIG_MM_UI_BTN_SHUTDOWN_COLOR);
+        btn_shutdown = mm_widget_button_create(panel_control_btn, MM_IMG_SRC_POWER, CONFIG_MM_UI_BTN_SHUTDOWN_COLOR);
         lv_obj_add_event_cb(btn_shutdown->button, __button_shutdown_press, LV_EVENT_CLICKED, btn_shutdown);
 
-        btn_reboot = mm_widget_button_create(panel_control_btn, MM_ICON_ARROW, CONFIG_MM_UI_BTN_REBOOT_COLOR);
+        btn_reboot = mm_widget_button_create(panel_control_btn, MM_IMG_SRC_ARROW, CONFIG_MM_UI_BTN_REBOOT_COLOR);
         lv_obj_add_event_cb(btn_reboot->button, __button_restart_press, LV_EVENT_CLICKED, btn_reboot);
 
         btn_enablenotif = mm_widget_button_create_checkable(
                 panel_control_btn,
-                MM_ICON_BELL,
+                MM_IMG_SRC_BELL,
                 CONFIG_MM_UI_BTN_ENABLENOTIF_COLOR,
                 !mm_conf_get_as_integer(MM_CONF_DONOTDISTURB)
         );
@@ -418,7 +418,7 @@ void mm_ui_screen_create_main()
         lv_obj_add_event_cb(btn_rot->button, __button_autorot_toggle, LV_EVENT_VALUE_CHANGED, btn_rot);
         lv_event_send(btn_rot->button, LV_EVENT_VALUE_CHANGED, NULL);
         #else
-        btn_rot = mm_widget_button_create(panel_control_btn, MM_ICON_DOUBLE_ARROW, CONFIG_MM_UI_BTN_ROTATION_COLOR);
+        btn_rot = mm_widget_button_create(panel_control_btn, MM_IMG_SRC_DOUBLE_ARROW, CONFIG_MM_UI_BTN_ROTATION_COLOR);
         lv_obj_add_event_cb(btn_rot->button, __button_rotate_press, LV_EVENT_CLICKED, btn_rot);
         #endif
         //lv_obj_add_flag(child, LV_OBJ_FLAG_FLEX_IN_NEW_TRACK)

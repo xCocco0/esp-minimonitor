@@ -1,0 +1,23 @@
+/*            NAME                 STRING NAME          WIDTH RESIZEABLE */
+FOR_EACH_ICON(ARROW              , arrow              , 24, 1 )
+FOR_EACH_ICON(ARROW_DOWN         , arrow_down         , 24, 1 )
+FOR_EACH_ICON(ARROW_LEFT         , arrow_left         , 24, 1 )
+FOR_EACH_ICON(ARROW_RIGHT        , arrow_right        , 24, 1 )
+FOR_EACH_ICON(ARROW_UP           , arrow_up           , 24, 1 )
+FOR_EACH_ICON(BELL               , bell               , 24, 1 )
+FOR_EACH_ICON(BELL_SLASH         , bell_slash         , 24, 1 )
+FOR_EACH_ICON(CLICK              , click              , 24, 1 )
+FOR_EACH_ICON(DOUBLE_ARROW       , double_arrow       , 24, 1 )
+FOR_EACH_ICON(DOUBLE_ARROW_SLASH , double_arrow_slash , 24, 1 )
+FOR_EACH_ICON(EMPTY_SUN          , empty_sun          , 24, 1 )
+FOR_EACH_ICON(POWER              , power              , 24, 1 )
+FOR_EACH_ICON(SUN                , sun                , 24, 1 )
+FOR_EACH_ICON(TAP                , tap                , 24, 1 )
+FOR_EACH_ICON(TOUCHPAD           , touchpad           , 24, 1 )
+FOR_EACH_ICON(TRASH              , trash              , 24, 1 )
+FOR_EACH_ICON(ENVELOPE           , envelope           , 24, 1 )
+FOR_EACH_ICON(WIFI               , wifi               , 24, 1 )
+FOR_EACH_ICON(WIFI_SLASH         , wifi_slash         , 24, 1 )
+
+
+

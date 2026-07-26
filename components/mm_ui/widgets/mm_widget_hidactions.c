@@ -250,7 +250,7 @@ lv_obj_t *mm_widget_hidactions_control_add(lv_obj_t *parent, struct mm_hid_contr
     mm_widget_button_t *btn;
     uint32_t primary_color;
     mm_widget_hidactions_control_t *c;
-    mm_icon_t *ico;
+    const mm_img_src_t *ico;
     int index;
     char buf[__BTN_LBL_BUFSIZE];
 
@@ -295,17 +295,14 @@ lv_obj_t *mm_widget_hidactions_control_add(lv_obj_t *parent, struct mm_hid_contr
 
         ico = NULL;
         if(strnlen(conf->u.autoclicker.icon, sizeof(conf->u.autoclicker.icon)) > 0) {
-            ico = mm_icon_search_in_flash(conf->u.autoclicker.icon);
-            if(!ico) {
-                ico = mm_icon_search_in_sdcard(conf->u.autoclicker.icon);
-            }
+            ico = mm_img_src(conf->u.autoclicker.icon);
         }
         if(!ico) {
             /* default icon */
             if(c->act_m.type == MM_HID_ACTION_MOUSE) {
-                ico = MM_ICON_CLICK;
+                ico = MM_IMG_SRC_CLICK;
             } else {
-                ico = MM_ICON_TAP;
+                ico = MM_IMG_SRC_TAP;
             }
         }
 
@@ -377,10 +374,7 @@ lv_obj_t *mm_widget_hidactions_control_add(lv_obj_t *parent, struct mm_hid_contr
 
             ico = NULL;
             if(strnlen(conf->u.matrix.icons[i], sizeof(conf->u.matrix.icons[0])) > 0) {
-                ico = mm_icon_search_in_flash(conf->u.matrix.icons[i]);
-                if(!ico) {
-                    ico = mm_icon_search_in_sdcard(conf->u.matrix.icons[i]);
-                }
+                ico = mm_img_src(conf->u.matrix.icons[i]);
                 if(ico) {
                     btn = mm_widget_button_create(c_obj, ico, primary_color);
                 } else {
@@ -411,7 +405,7 @@ lv_obj_t *mm_widget_hidactions_control_add(lv_obj_t *parent, struct mm_hid_contr
         lv_obj_set_style_flex_flow(c_obj, LV_FLEX_FLOW_ROW, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_flex_cross_place(c_obj, LV_FLEX_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-        btn = mm_widget_button_create(c_obj, MM_ICON_TOUCHPAD, primary_color);
+        btn = mm_widget_button_create(c_obj, MM_IMG_SRC_TOUCHPAD, primary_color);
         lv_obj_add_event_cb(btn->button, __open_touchpad, LV_EVENT_CLICKED, (void *) c);
         free(btn);
 

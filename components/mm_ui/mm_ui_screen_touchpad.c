@@ -185,7 +185,7 @@ void mm_ui_screen_create_touchpad(void)
 
         img_mouse = lv_img_create(screen_touchpad);
         lv_obj_center(img_mouse);
-        lv_img_set_src(img_mouse, MM_ICON_TAP);
+        lv_img_set_src(img_mouse, MM_IMG_SRC_TAP);
         lv_img_set_zoom(img_mouse, 256*2);
         lv_img_set_antialias(img_mouse, 0);
         lv_obj_set_style_img_recolor(img_mouse, mm_style_color_detail(), LV_PART_MAIN | LV_STATE_DEFAULT);
