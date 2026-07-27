@@ -334,6 +334,7 @@ void __repl_task(void *args)
 
 static void __start_repl(void)
 {
+    BaseType_t ret;
     /* we use non-blocking mode because we will wait in
      * the select call inside __interruptible_read */
     int stdin_fileno = fileno(stdin);
@@ -355,7 +356,12 @@ static void __start_repl(void)
 
     MM_LOG_I("Starting REPL task");
     xEventGroupClearBits(s_repl_control_eg, REPL_REQ_STOP);
-    MM_CHECK_E(xTaskCreatePinnedToCore(__repl_task, "mm_repl_task", configMINIMAL_STACK_SIZE + CONFIG_MM_CLI_TASK_ADDITIONAL_STACK, NULL, 1, &s_repl_task_handle, tskNO_AFFINITY) == pdTRUE);
+    ret = xTaskCreate(__repl_task, "mm_repl_task",
+            configMINIMAL_STACK_SIZE + CONFIG_MM_CLI_TASK_ADDITIONAL_STACK,
+            NULL,
+            CONFIG_MM_CLI_TASK_PRIO,
+            &s_repl_task_handle);
+    MM_CHECK_E(ret == pdPASS);
 }
 
 static void __stop_repl(void)

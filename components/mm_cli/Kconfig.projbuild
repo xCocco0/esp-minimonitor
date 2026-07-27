@@ -34,6 +34,12 @@ menu "Minimonitor - Command line interface"
         help
             Additional stack size space with respect to the minimal size.
 
+    config MM_CLI_TASK_PRIO
+        int "CLI task priority"
+        default 1
+        help
+            Priority level for the CLI task.
+
     config MM_CLI_PROMPT_COLOR
         int "Prompt color"
         default 36

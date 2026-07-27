@@ -77,7 +77,7 @@ void mm_event_queue(mm_event_t id, void *data)
         .data = data,
     };
 
-    BaseType_t err = xQueueSendToBack(s_event_queue, (void *) &e, 0);
+    BaseType_t err = xQueueSendToBack(s_event_queue, (void *) &e, portMAX_DELAY);
     MM_CHECK_W(err == pdPASS && "Skipping event");
 }
 

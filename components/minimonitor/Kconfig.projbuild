@@ -16,7 +16,7 @@ menu "Minimonitor"
 
         config MM_EVENT_TASK_PRIO
             int "Event task priority"
-            default 1
+            default 2
             help
                 Priority level for the event task.
 

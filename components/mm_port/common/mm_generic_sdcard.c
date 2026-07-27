@@ -113,9 +113,9 @@ esp_err_t mm_generic_sdcard_init(void)
 
     MM_LOG_I("Filesystem mounted");
 
-    uint64_t tot, fr;
-    esp_vfs_fat_info(mount_point, &tot, &fr);
-    printf("%s: %"PRIu64"MB/%"PRIu64"MB\n", mount_point, fr/1024/1024, tot/1024/1024);
+    // uint64_t tot, fr;
+    // esp_vfs_fat_info(mount_point, &tot, &fr);
+    // MM_LOG_I("%s: %"PRIu64"MB/%"PRIu64"MB", mount_point, fr/1024/1024, tot/1024/1024);
 
     return ESP_OK;
 
