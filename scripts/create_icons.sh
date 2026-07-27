@@ -67,15 +67,14 @@ if [ 1 ]; then
 
 for file in $images
 do
-    continue
 	name=$(echo $(basename $file) | grep -o '^[^\.]*')
 	echo $name
 
 	rsvg-convert "$file" -w $SIZE -h $SIZE -f png -o "$DST_DIR/${name}.png.tmp"
 	tmp="$tmp $DST_DIR/${name}.png.tmp"
 
-	$LV_CONV8 "$DST_DIR/${name}.png.tmp" -f -c CF_TRUE_COLOR_ALPHA -i "mm_icon_$name" -o "$DST_DIR/v8/mm_icon_$name.c" &
-	python3 $LV_CONV9 --cf A1 --ofmt C -o "$DST_DIR/v9" "$DST_DIR/${name}.png.tmp" --name "mm_icon_$name" &
+	$LV_CONV8 "$DST_DIR/${name}.png.tmp" -f -c CF_TRUE_COLOR_ALPHA -i "mm_img_src_$name" -o "$DST_DIR/v8/mm_img_src_$name.c" &
+	python3 $LV_CONV9 --cf A1 --ofmt C -o "$DST_DIR/v9" "$DST_DIR/${name}.png.tmp" --name "mm_img_src_$name" &
 	sleep 0.8
 done
 
@@ -90,11 +89,12 @@ fi
 
 echo "==================== CMake sources variable ======================"
 
+echo "set(LV_MAJOR 8)"
 echo "set(SRC_IMAGES"
 for file in $images
 do
 	name=$(echo $(basename $file) | grep -o '^[^\.]*')
-	printf "        \"icons/v8/mm_icon_%s.c\"\n" "$name"
+	printf "        \"icons/v\${LV_MAJOR}/mm_img_src_%s.c\"\n" "$name"
 done
 echo ")"
 
@@ -109,6 +109,3 @@ do
 done
 
 echo "=================================================================="
-
-#
-#

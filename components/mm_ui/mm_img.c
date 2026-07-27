@@ -15,7 +15,7 @@
 #include "mm_icon.h"
 
 static lv_img_dsc_t *s_dsc_map[MM_ICON_COUNT] = {
-    #define FOR_EACH_ICON(id, n, w, r) [MM_ICON_##id] = &mm_icon_##n ,
+    #define FOR_EACH_ICON(id, n, w, r) [MM_ICON_##id] = &mm_img_src_##n ,
     #include "mm_icons.def"
     #undef FOR_EACH_ICON
 };

@@ -1,0 +1,65 @@
+
+#if defined(LV_LVGL_H_INCLUDE_SIMPLE)
+#include "lvgl.h"
+#elif defined(LV_LVGL_H_INCLUDE_SYSTEM)
+#include <lvgl.h>
+#elif defined(LV_BUILD_TEST)
+#include "../lvgl.h"
+#else
+#include "lvgl/lvgl.h"
+#endif
+
+#ifndef LV_ATTRIBUTE_MEM_ALIGN
+#define LV_ATTRIBUTE_MEM_ALIGN
+#endif
+
+#ifndef LV_ATTRIBUTE_MM_IMG_SRC_DOUBLE_ARROW_SLASH
+#define LV_ATTRIBUTE_MM_IMG_SRC_DOUBLE_ARROW_SLASH
+#endif
+
+static const
+LV_ATTRIBUTE_MEM_ALIGN LV_ATTRIBUTE_LARGE_CONST LV_ATTRIBUTE_MM_IMG_SRC_DOUBLE_ARROW_SLASH
+uint8_t mm_img_src_double_arrow_slash_map[] = {
+
+    0xf8,0x3c,0x02,
+    0x7c,0x3f,0x87,
+    0x3e,0x1f,0xcf,
+    0x1e,0x0f,0xff,
+    0x3f,0x07,0xff,
+    0x3f,0x81,0xff,
+    0x7f,0xc0,0xff,
+    0x3f,0xe1,0xff,
+    0x09,0xe0,0xff,
+    0x00,0xf0,0x7f,
+    0x00,0x78,0x3f,
+    0x00,0x7c,0x00,
+    0x00,0x3e,0x00,
+    0xff,0xfe,0x00,
+    0xff,0xef,0x00,
+    0xff,0xc7,0x80,
+    0xff,0x87,0xc0,
+    0xff,0x03,0xe0,
+    0xff,0x81,0xf0,
+    0xff,0xff,0xf0,
+    0xff,0xff,0xf8,
+    0xf3,0xff,0xfc,
+    0xe1,0xff,0xfe,
+    0x40,0x3f,0x1f,
+
+};
+
+const lv_image_dsc_t mm_img_src_double_arrow_slash = {
+  .header = {
+    .magic = LV_IMAGE_HEADER_MAGIC,
+    .cf = LV_COLOR_FORMAT_A1,
+    .flags = 0,
+    .w = 24,
+    .h = 24,
+    .stride = 3,
+    .reserved_2 = 0,
+  },
+  .data_size = sizeof(mm_img_src_double_arrow_slash_map),
+  .data = mm_img_src_double_arrow_slash_map,
+  .reserved = NULL,
+};
+

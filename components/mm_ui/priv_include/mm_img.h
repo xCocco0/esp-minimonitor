@@ -26,12 +26,12 @@ union mm_img_src_u {
 
 typedef union mm_img_src_u mm_img_src_t;
 
-#define FOR_EACH_ICON(id, n, w, r) extern lv_img_dsc_t mm_icon_##n ;
+#define FOR_EACH_ICON(id, n, w, r) extern lv_img_dsc_t mm_img_src_##n ;
 #include "mm_icons.def"
 #undef FOR_EACH_ICON
 
-/* TODO: check overhead */
-#define FOR_EACH_ICON(id, n, w, r) static const mm_img_src_t* const MM_IMG_SRC_##id = (mm_img_src_t *) &mm_icon_##n;
+/* note: the compiler will optimize and inline this constants */
+#define FOR_EACH_ICON(id, n, w, r) static const mm_img_src_t* const MM_IMG_SRC_##id = (mm_img_src_t *) &mm_img_src_##n;
 #include "mm_icons.def"
 #undef FOR_EACH_ICON
 
