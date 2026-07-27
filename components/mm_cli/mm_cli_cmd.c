@@ -1247,6 +1247,7 @@ static int __rotate_cmd(int argc, char **argv)
 
 static struct {
     struct arg_str *cmd;
+    struct arg_lit *ui;
     struct arg_end *end;
 } __info_opt;
 
@@ -1263,6 +1264,7 @@ static inline esp_err_t __register_info(void)
     };
 
     __info_opt.cmd = arg_strn(NULL, NULL, "<subcmd>", 0, 1, "Subcommand (icons|keys|network).");
+    __info_opt.ui =  arg_litn("u", "ui", 0, 1, "Show output on screen UI.");
     __info_opt.end = arg_end(0);
 
     return esp_console_cmd_register(&info_cmd_config);
@@ -1271,10 +1273,20 @@ static inline esp_err_t __register_info(void)
 static int __info_icons_cmd(int argc, char **argv)
 {
     mm_icon_builtin_t icon;
-    printf("Available icons (builtin):\n");
-    printf("%-20s %6s\n", "[Icon name]", "[Size]");
-    for_each_icon(icon) {
-        printf("%-20s %6d\n", mm_icon_get_string_name(icon), mm_icon_get_size(icon));
+    const char *icon_name;
+
+    mm_snooze("icon_preview");
+    if(__info_opt.ui->count > 0) {
+        for_each_icon(icon) {
+            icon_name = mm_icon_get_string_name(icon);
+            mm_notify("icon_preview", icon_name, 0, 0, icon_name, MM_NOTIFY_APPEND, 0);
+        }
+    } else {
+        printf("Available icons (builtin):\n");
+        printf("%-20s %6s\n", "[Icon name]", "[Size]");
+        for_each_icon(icon) {
+            printf("%-20s %6d\n", mm_icon_get_string_name(icon), mm_icon_get_size(icon));
+        }
     }
     return 0;
 }
