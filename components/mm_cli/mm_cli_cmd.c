@@ -59,7 +59,7 @@ static inline esp_err_t __register_hostname(void)
 static int __hostname_cmd(int argc, char **argv)
 {
     int ret = arg_parse(argc, argv, (void **) &__hostname_opt);
-    if (ret != 0) {
+    if(ret != 0) {
         arg_print_errors(stderr, __hostname_opt.end, argv[0]);
         return 1;
     }
@@ -131,11 +131,12 @@ static int __setsensor_cmd(int argc, char **argv)
     int index;
 
     ret = arg_parse(argc, argv, (void **) &__setsensor_opt);
-    if (ret != 0) {
+    if(ret != 0) {
         arg_print_errors(stderr, __setsensor_opt.end, argv[0]);
         return 1;
     }
     if(argc < 3) {
+        __print_usage(stderr, "Usage:", argv[0], &__setsensor_opt);
         return 1;
     }
 
@@ -211,14 +212,13 @@ static int __sensorconfig_cmd(int argc, char **argv)
     struct mm_sensor_meter_config_s param = MM_SENSOR_METER_CONFIG_DEFAULT;
 
     ret = arg_parse(argc, argv, (void **) &__sensorconfig_opt);
-    if (ret != 0) {
+    if(ret != 0) {
         arg_print_errors(stderr, __sensorconfig_opt.end, argv[0]);
-        MM_LOG_E("Reject command: %s", argv[0]);
         return 1;
     }
 
     if(__sensorconfig_opt.index->count == 0) {
-        MM_LOG_E("Specify an index: %s", argv[0]);
+        __print_usage(stderr, "Please specify an index:", argv[0], &__sensorconfig_opt);
         return 1;
     }
 
@@ -598,20 +598,21 @@ static int __setwifi_cmd(int argc, char **argv)
     const char *ssid = NULL, *password = NULL;
 
     ret = arg_parse(argc, argv, (void **) &__setwifi_opt);
-    if (ret != 0) {
+    if(ret != 0) {
         arg_print_errors(stderr, __setwifi_opt.end, argv[0]);
         return 1;
     }
     if(argc <= 1) {
+        __print_usage(stderr, "Usage:", argv[0], &__setwifi_opt);
         return 1;
     }
 
-    if(__setwifi_opt.ssid->count > 0) ssid = __setwifi_opt.ssid->sval[0];
-    if(__setwifi_opt.password->count > 0) password = __setwifi_opt.password->sval[0];
+    if(__setwifi_opt.ssid->count > 0) {ssid = __setwifi_opt.ssid->sval[0];}
+    if(__setwifi_opt.password->count > 0) {password = __setwifi_opt.password->sval[0];}
 
     mm_setwifi(ssid, password);
 
-    printf("wifi credentials updated. ret=%d\n", ret);
+    printf("WiFi credentials updated.\n");
 
     return 0;
 }
@@ -641,8 +642,6 @@ static int __reboot_cmd(int argc, char **argv)
     int ret = 0;
 
     mm_reboot();
-
-    printf("reboot returned. ret=%d\n", ret);
 
     return ret;
 }
@@ -684,7 +683,7 @@ static int __date_cmd(int argc, char **argv)
 
 
     ret = arg_parse(argc, argv, (void **) &__date_opt);
-    if (ret != 0) {
+    if(ret != 0) {
         arg_print_errors(stderr, __date_opt.end, argv[0]);
         return 1;
     }
@@ -719,7 +718,8 @@ static int __date_cmd(int argc, char **argv)
                 timeinfo.tm_min =  timeinfo.tm_min  % 60; /* 0-59 */
                 break;
             default:
-                return -1;
+                fprintf(stderr, "Could not parse date string.\n");
+                return 1;
         }
 
         tv.tv_sec = mktime(&timeinfo);
@@ -818,8 +818,13 @@ static int __notify_cmd(int argc, char **argv)
     int ret;
 
     ret = arg_parse(argc, argv, (void **) &__notify_opt);
-    if (ret != 0) {
+    if(ret != 0) {
         arg_print_errors(stderr, __notify_opt.end, argv[0]);
+        return 1;
+    }
+
+    if(argc < 2) {
+        __print_usage(stderr, "Usage:", argv[0], &__notify_opt);
         return 1;
     }
 
@@ -876,7 +881,7 @@ static int __snooze_cmd(int argc, char **argv)
 {
     int ret;
     ret = arg_parse(argc, argv, (void **) &__snooze_opt);
-    if (ret != 0) {
+    if(ret != 0) {
         arg_print_errors(stderr, __snooze_opt.end, argv[0]);
         return 1;
     }
@@ -922,7 +927,7 @@ static int __tzset_cmd(int argc, char **argv)
 {
     int ret;
     ret = arg_parse(argc, argv, (void **) &__tzset_opt);
-    if (ret != 0) {
+    if(ret != 0) {
         arg_print_errors(stderr, __tzset_opt.end, argv[0]);
         return 1;
     }
@@ -1007,7 +1012,7 @@ static int __config_cmd(int argc, char **argv)
     mm_conf_entry_t entry;
 
     ret = arg_parse(argc, argv, (void **) &__config_opt);
-    if (ret != 0) {
+    if(ret != 0) {
         arg_print_errors(stderr, __config_opt.end, argv[0]);
         return 1;
     }
@@ -1026,9 +1031,16 @@ static int __config_cmd(int argc, char **argv)
             }
         }
     } else {
+
+        if(__config_opt.key->count == 0) {
+            __print_usage(stderr, "Usage:", argv[0], &__config_opt);
+            return 1;
+        }
+
         entry = mm_conf_entry_by_name(__config_opt.key->sval[0]);
 
         if(entry == MM_CONF_NONE) {
+            fprintf(stderr, "Config entry '%s' does not exist.\n", __config_opt.key->sval[0]);
             return 1;
         }
 
@@ -1081,7 +1093,7 @@ static int __backlight_cmd(int argc, char **argv)
 {
     int ret;
     ret = arg_parse(argc, argv, (void **) &__backlight_opt);
-    if (ret != 0) {
+    if(ret != 0) {
         arg_print_errors(stderr, __backlight_opt.end, argv[0]);
         return 1;
     }
@@ -1144,11 +1156,11 @@ static inline esp_err_t __register_log(void)
 static int __log_cmd(int argc, char **argv)
 {
     int ret;
-    uint8_t log_level = ESP_LOG_MAX;
+    uint8_t log_level = UINT8_MAX;
     const char *module = "*";
 
     ret = arg_parse(argc, argv, (void **) &__log_opt);
-    if (ret != 0) {
+    if(ret != 0) {
         arg_print_errors(stderr, __log_opt.end, argv[0]);
         return 1;
     }
@@ -1162,6 +1174,11 @@ static int __log_cmd(int argc, char **argv)
     if(__log_opt.l_all->count > 0)      {log_level = ESP_LOG_MAX;}
     if(__log_opt.level->count > 0)      {log_level = __log_opt.level->ival[0];}
     if(__log_opt.module->count > 0)     {module = __log_opt.module->sval[0];}
+
+    if(log_level == UINT8_MAX) {
+        __print_usage(stderr, "Usage:", argv[0], &__log_opt);
+        return 1;
+    }
 
     esp_log_level_set(module, log_level);
 
@@ -1204,10 +1221,10 @@ static inline esp_err_t __register_rotate(void)
 static int __rotate_cmd(int argc, char **argv)
 {
     int ret;
-    uint8_t rot_deg = 127;
+    uint8_t rot_deg = UINT8_MAX;
 
     ret = arg_parse(argc, argv, (void **) &__rotate_opt);
-    if (ret != 0) {
+    if(ret != 0) {
         arg_print_errors(stderr, __rotate_opt.end, argv[0]);
         return 1;
     }
@@ -1228,12 +1245,13 @@ static int __rotate_cmd(int argc, char **argv)
         }
     }
 
-    if(rot_deg != 127) {
+    if(rot_deg != UINT8_MAX) {
         mm_conf_set(MM_CONF_PREFERRED_ROTATION, &rot_deg);
         mm_conf_set(MM_CONF_AUTOROTATION, (uint8_t []) {0});
         /* TODO: update rotation immediately */
-        printf("Preferreed rotation set.\n");
+        printf("Preferred rotation set.\n");
     } else {
+        __print_usage(stderr, "Usage:", argv[0], &__rotate_opt);
         return 1;
     }
 
@@ -1316,6 +1334,21 @@ static int __info_keys_cmd(int argc, char **argv)
     return 0;
 }
 
+static const char *__rssi_qualitative(int8_t rssi)
+{
+    if(rssi > -30) {
+        return "Too strong";
+    } else if(rssi > -68) {
+        return "Excellent";
+    } else if(rssi > -71) {
+        return "Strong";
+    } else if(rssi > -80) {
+        return "Weak";
+    } else {
+        return "Very weak";
+    }
+}
+
 static int __info_network_cmd(int argc, char **argv)
 {
     int ret;
@@ -1328,7 +1361,7 @@ static int __info_network_cmd(int argc, char **argv)
         printf("SSID:   %s [%02x:%02x:%02x:%02x:%02x:%02x]\n", info.ssid,
                 info.bssid[0], info.bssid[1], info.bssid[2], info.bssid[3], info.bssid[4], info.bssid[5]);
         printf("IP:     %d.%d.%d.%d\n", info.ipv4[0], info.ipv4[1], info.ipv4[2], info.ipv4[3]);
-        printf("RSSI:   %"PRId8"\n", info.rssi);
+        printf("RSSI:   %"PRId8" [%s]\n", info.rssi, __rssi_qualitative(info.rssi));
     } else {
         printf("Status: Not connected\n");
     }
@@ -1341,7 +1374,7 @@ static int __info_cmd(int argc, char **argv)
     int ret;
 
     ret = arg_parse(argc, argv, (void **) &__info_opt);
-    if (ret != 0) {
+    if(ret != 0) {
         arg_print_errors(stderr, __info_opt.end, argv[0]);
         return 1;
     }
