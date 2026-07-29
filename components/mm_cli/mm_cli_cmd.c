@@ -19,6 +19,8 @@
 #include "mm_sensor.h"
 #include "mm_macros.h"
 #include "mm_icon.h"
+#include "mm_event.h"
+#include "esp_heap_caps.h"
 
 static void __print_usage(FILE *f, const char *header, const char *prefix, void *argtable)
 {
@@ -1281,7 +1283,7 @@ static inline esp_err_t __register_info(void)
         .argtable = &__info_opt,
     };
 
-    __info_opt.cmd = arg_strn(NULL, NULL, "<subcmd>", 0, 1, "Subcommand (icons|keys|network).");
+    __info_opt.cmd = arg_strn(NULL, NULL, "<subcmd>", 0, 1, "Subcommand (icons|keys|network|tasks).");
     __info_opt.ui =  arg_litn("u", "ui", 0, 1, "Show output on screen UI.");
     __info_opt.end = arg_end(0);
 
@@ -1369,9 +1371,120 @@ static int __info_network_cmd(int argc, char **argv)
     return 0;
 }
 
+#if CONFIG_MM_EVENT_TRACE_CPU_USAGE
+static const char *__event_name(mm_event_t id)
+{
+    switch(id) {
+        case MM_EVENT_PERIODIC:      return "periodic";
+        case MM_EVENT_BACKGROUND:    return "background";
+        case MM_EVENT_SETTIME:       return "settime";
+        case MM_EVENT_NOTIFY:        return "notify";
+        case MM_EVENT_SNOOZE:        return "snooze";
+        case MM_EVENT_SETSENSOR:     return "setsensor";
+        case MM_EVENT_CONFSENSOR:    return "confsensor";
+        case MM_EVENT_REBOOT:        return "reboot";
+        case MM_EVENT_SNTPTRIGGER:   return "sntptrigger";
+        case MM_EVENT_SETHOSTNAME:   return "sethostname";
+        case MM_EVENT_SETTIMEZONE:   return "settimezone";
+        case MM_EVENT_SETWIFI:       return "setwifi";
+        case MM_EVENT_CHANGETILE:    return "changetile";
+        case MM_EVENT_SETBACKLIGHT:  return "setbacklight";
+        case MM_EVENT_BSOD:          return "bsod";
+        case MM_EVENT_STARTUP:       return "startup";
+        case MM_EVENT_MOTION:        return "motion";
+        case MM_EVENT_CONFHID:       return "confhid";
+        case MM_EVENT_SENDHID:       return "sendhid";
+        case MM_EVENT_DATA_REQUEST:  return "data_request";
+        default:                     break;
+    }
+
+    MM_LOG_W("Unknown event id %d", id);
+    return "";
+}
+#endif
+
+static uint32_t __freertos_counter_to_ms(configRUN_TIME_COUNTER_TYPE count)
+#if CONFIG_FREERTOS_RUN_TIME_STATS_USING_ESP_TIMER
+{
+    /* count is in microseconds */
+    return count/1000;
+}
+#else
+{
+    /* we don't know the units: measure a sample */
+    static configRUN_TIME_COUNTER_TYPE sample_delta = 0;
+
+    if(!sample_delta) {
+        sample_delta = portGET_RUN_TIME_COUNTER_VALUE();
+        /* wait 10 ticks.
+           on average, this will block for 9.5*portTICK_PERIOD_MS milliseconds due to tick period precision */
+        vTaskDelay(10);
+        sample_delta = portGET_RUN_TIME_COUNTER_VALUE() - sample_delta;
+        printf("sample_delta = %"PRIu32"\n", sample_delta);
+    }
+    return count * (9 * portTICK_PERIOD_MS + portTICK_PERIOD_MS/2) / sample_delta;
+}
+#endif
+
+static int __info_tasks_cmd(int argc, char **argv)
+{
+    #if CONFIG_FREERTOS_USE_TRACE_FACILITY && CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
+    UBaseType_t ntasks = uxTaskGetNumberOfTasks();
+    TaskStatus_t *status = calloc(ntasks, sizeof(TaskStatus_t));
+    configRUN_TIME_COUNTER_TYPE runtime = 0;
+    #endif
+    #if CONFIG_MM_EVENT_TRACE_CPU_USAGE
+    uint32_t event_cpu_time_ms;
+    TickType_t uptime = 0;
+    #endif
+    int printed = 0;
+
+    /* print freertos tasks info */
+
+    #if CONFIG_FREERTOS_USE_TRACE_FACILITY && CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS
+
+    printed = 1;
+    ntasks = uxTaskGetSystemState(status, ntasks, &runtime);
+
+    printf("FreeRTOS tasks CPU time:\n");
+    for(int i = 0; i < ntasks; ++i) {
+        printf("%-20s %9"PRIu32" ms (%2d.%01d%%)\n",
+                status[i].pcTaskName, __freertos_counter_to_ms(status[i].ulRunTimeCounter),
+                (int) (100 * status[i].ulRunTimeCounter / runtime),
+                (int) ((10 * 100 * status[i].ulRunTimeCounter / runtime) % 10));
+    }
+    #endif
+
+    /* print mm_event handler info */
+
+    #if CONFIG_MM_EVENT_TRACE_CPU_USAGE
+
+    printed = 1;
+    uptime = pdTICKS_TO_MS(xTaskGetTickCount());
+
+    printf("Minimonitor events CPU time:\n");
+    for(int i = 0; i < MM_EVENT_MAX; ++i) {
+        event_cpu_time_ms = mm_event_cpu_usage(i);
+        printf("%-20s %9"PRIu32" ms (%2d.%01d%%)\n",
+                __event_name(i), event_cpu_time_ms,
+                (int) (100 * event_cpu_time_ms / uptime),
+                (int) ((10 * 100 * event_cpu_time_ms / uptime) % 10));
+    }
+    #endif
+
+    if(!printed) {
+        fprintf(stderr, "No way to monitor task usage.\n");
+        (void) __freertos_counter_to_ms;
+    }
+
+    return 0;
+}
+
 static int __info_cmd(int argc, char **argv)
 {
     int ret;
+    multi_heap_info_t info;
+    char *hostname;
 
     ret = arg_parse(argc, argv, (void **) &__info_opt);
     if(ret != 0) {
@@ -1388,7 +1501,10 @@ static int __info_cmd(int argc, char **argv)
             ret = __info_keys_cmd(argc - 1, &argv[1]);
         } else if(strcmp(mode, "network") == 0) {
             ret = __info_network_cmd(argc - 1, &argv[1]);
+        } else if(strcmp(mode, "tasks") == 0) {
+            ret = __info_tasks_cmd(argc - 1, &argv[1]);
         }
+
     } else {
         /* not subcommand: print generic infos */
         printf(MINIMONITOR_ASCII_ART_STR "\n");
@@ -1397,9 +1513,30 @@ static int __info_cmd(int argc, char **argv)
         printf("\n");
         printf("Compiled: %s, %s\n", __DATE__, __TIME__);
         printf("Target board: %s\n", CONFIG_MM_PORT_TARGET_BOARD);
+        printf("Target architecure: "
+                #if CONFIG_IDF_TARGET_ARCH_XTENSA
+                "Xtensa"
+                #elif CONFIG_IDF_TARGET_ARCH_RISCV
+                "RISC-V"
+                #elif CONFIG_IDF_TARGET_LINUX
+                "Linux"
+                #else
+                "Unknown"
+                #endif
+                "\n");
+        heap_caps_get_info(&info, MALLOC_CAP_INTERNAL);
+        printf("RAM usage: %dkB/%dkB\n", info.total_allocated_bytes / 1024, (info.total_allocated_bytes + info.total_free_bytes) / 1024);
+        #if CONFIG_SPIRAM
+        heap_caps_get_info(&info, MALLOC_CAP_SPIRAM);
+        printf("SPIRAM usage %dkB/%dkB\n", info.total_allocated_bytes / 1024, (info.total_allocated_bytes + info.total_free_bytes) / 1024);
+        #endif
+        hostname = mm_conf_get_with_malloc(MM_CONF_HOSTNAME);
+        if(hostname) {
+            printf("Hostname: %s\n", hostname);
+            free(hostname);
+        }
         printf("Current time: ");
         __date_cmd(0, NULL);
-        /* TODO: add more */
         ret = 0;
     }
 

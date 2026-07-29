@@ -6,6 +6,46 @@ menu "Minimonitor"
         help
             Enables additional configuration options
 
+    config MM_PERIODIC_RAM_REPORT
+        bool "Periodic RAM usage report" if MM_EXPERT
+        default false
+
+    if MM_PERIODIC_RAM_REPORT
+
+        config MM_PERIODIC_RAM_REPORT_PERIOD_S
+            int "Periodic RAM usage report period (seconds)" if MM_EXPERT
+            default 300
+
+    endif
+
+    config MM_EVENT_TRACE_CPU_USAGE
+        bool "Trace events CPU usage"
+        default false
+        help
+            If enabled, measure CPU time consumed by each of the Minimonitor events.
+            Config FREERTOS_USE_TRACE_FACILITY is strongly recommended for detailed reports.
+
+    choice MM_ICON_SET
+        prompt "Icon set to compile"
+        default MM_ICON_SET_ALL
+        help
+            Choose to compile all icons or a reduced amount to save flash memory.
+
+        config MM_ICON_SET_ALL
+            bool "All (recommended)"
+        config MM_ICON_SET_MINIMAL
+            bool "Minimal"
+
+    endchoice
+
+    # NOTE: global level is set by CONFIG_LOG_MAXIMUM_LEVEL
+    config MM_LOG_LEVEL
+        int "Maximum log level"
+        range 0 6
+        default 4
+        help
+            Maximum log level for this component
+
     menu "Event queue"
 
         config MM_EVENT_QUEUE_LEN
@@ -57,18 +97,6 @@ menu "Minimonitor"
             default 64
 
     endmenu
-
-    config MM_PERIODIC_RAM_REPORT
-        bool "Periodic RAM usage report" if MM_EXPERT
-        default false
-
-    if MM_PERIODIC_RAM_REPORT
-
-        config MM_PERIODIC_RAM_REPORT_PERIOD_S
-            int "Periodic RAM usage report period (seconds)" if MM_EXPERT
-            default 300
-
-    endif
 
     menu "Keyboard/Mouse emulation"
 
@@ -156,26 +184,5 @@ menu "Minimonitor"
         endmenu
 
     endmenu
-
-    choice MM_ICON_SET
-        prompt "Icon set to compile"
-        default MM_ICON_SET_ALL
-        help
-            Choose to compile all icons or a reduced amount to save flash memory.
-
-        config MM_ICON_SET_ALL
-            bool "All (recommended)"
-        config MM_ICON_SET_MINIMAL
-            bool "Minimal"
-
-    endchoice
-
-    # NOTE: global level is set by CONFIG_LOG_MAXIMUM_LEVEL
-    config MM_LOG_LEVEL
-        int "Maximum log level"
-        range 0 6
-        default 4
-        help
-            Maximum log level for this component
 
 endmenu

@@ -11,6 +11,7 @@
 #ifndef __MM_EVENT_H
 #define __MM_EVENT_H
 
+#include "sdkconfig.h"
 #include <time.h>
 #include "mm_panic.h"
 #include "mm_sensor.h"
@@ -43,7 +44,7 @@ typedef enum {
     MM_EVENT_MOTION,              /**< IMU motion detected */
     MM_EVENT_CONFHID,             /**< Configure HID controls */
     MM_EVENT_SENDHID,             /**< Send HID event */
-    MM_EVENT_DATA_REQUEST,        /**< */
+    MM_EVENT_DATA_REQUEST,        /**< Request data to other modules */
 
     MM_EVENT_MAX,
 } mm_event_t;
@@ -52,6 +53,9 @@ typedef void (*mm_event_handler_t)(mm_event_t id, void *data);
 
 void mm_event_init(void);
 void mm_event_start(void);
+
+uint32_t mm_event_cpu_usage(mm_event_t id);
+void mm_event_print_cpu_usage(void);
 
 void mm_event_queue(mm_event_t id, void *data);
 void mm_event_add_handler(mm_event_t id, mm_event_handler_t func);

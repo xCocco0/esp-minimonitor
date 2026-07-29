@@ -21,6 +21,7 @@
 #include "mm_panic.h"
 #include "mm_sensor.h"
 #include "mm_err.h"
+#include "mm_macros.h"
 
 struct mm_event_handler_node {
     mm_list_node_t node;
@@ -34,6 +35,30 @@ struct mm_event_generic {
 
 static MM_LIST_DECLARE(s_event_handler_list[MM_EVENT_MAX]);
 static QueueHandle_t s_event_queue = NULL;
+#if CONFIG_MM_EVENT_TRACE_CPU_USAGE
+static struct timespec s_cpu_time[MM_EVENT_MAX];
+static struct timespec s_event_begin_time;
+#endif
+
+#if CONFIG_MM_EVENT_TRACE_CPU_USAGE
+static void __TRACE_EVENT_HANDLE_BEGIN(mm_event_t id)
+{
+    /* TODO use xTask the one to get info if available */
+    clock_gettime(CLOCK_MONOTONIC, &s_event_begin_time);
+}
+static void __TRACE_EVENT_HANDLE_END(mm_event_t id)
+{
+    struct timespec event_end_time, elapsed_time;
+    clock_gettime(CLOCK_MONOTONIC, &event_end_time);
+    /* compute begin-end delta t */
+    TIMESPEC_DIFF(&elapsed_time, &event_end_time, &s_event_begin_time);
+    /* sum to execution time */
+    TIMESPEC_SUM(&s_cpu_time[id], &s_cpu_time[id], &elapsed_time);
+}
+#else
+#define __TRACE_EVENT_HANDLE_BEGIN(...)
+#define __TRACE_EVENT_HANDLE_END(...)
+#endif
 
 static void mm_event_task(void *args);
 
@@ -48,6 +73,10 @@ void mm_event_init(void)
     for(int i = 0; i < MM_EVENT_MAX; ++i) {
         const mm_list_t tmp = MM_LIST_INIT(s_event_handler_list[i]);
         s_event_handler_list[i] = tmp;
+        #if CONFIG_MM_EVENT_TRACE_CPU_USAGE
+        s_cpu_time[i].tv_sec = 0;
+        s_cpu_time[i].tv_nsec = 0;
+        #endif
     }
 }
 
@@ -65,6 +94,34 @@ void mm_event_start(void)
     MM_CHECK_E(err == pdPASS);
 
     mm_event_queue(MM_EVENT_STARTUP, NULL);
+}
+
+/**
+ * @brief Get execution time for specific event
+ */
+uint32_t mm_event_cpu_usage(mm_event_t id)
+{
+    #if CONFIG_MM_EVENT_TRACE_CPU_USAGE
+    return TIMESPEC_TO_MS(&s_cpu_time[id]);
+    #else
+    return 0;
+    #endif
+}
+
+/**
+ * @brief Print per-event execution time using fprintf
+ */
+void mm_event_print_cpu_usage(void)
+{
+    uint32_t event_cpu_time_ms;
+    TickType_t uptime = pdTICKS_TO_MS(xTaskGetTickCount());
+
+    for(int i = 0; i < MM_EVENT_MAX; ++i) {
+        event_cpu_time_ms = mm_event_cpu_usage(i);
+        printf("Event %2d: %5"PRIu32" ms (%2d.%01d%%)", i, event_cpu_time_ms,
+                (int) (event_cpu_time_ms / uptime),
+                (int) ((10 * event_cpu_time_ms / uptime) % 10));
+    }
 }
 
 /**
@@ -111,11 +168,16 @@ void mm_event_delete_handler(mm_event_t id, mm_event_handler_t func)
     }
 }
 
-static void __mm_event_call_all_handlers(mm_event_t id, void *data) {
+static void __mm_event_call_all_handlers(mm_event_t id, void *data)
+{
+    __TRACE_EVENT_HANDLE_BEGIN(id);
+
     MM_LIST_FOREACH(s_event_handler_list[id], it) {
         struct mm_event_handler_node *n = MM_LIST_ITEM(it, struct mm_event_handler_node, node);
         n->func(id, data);
     }
+
+    __TRACE_EVENT_HANDLE_END(id);
 }
 
 /* --- MM_EVENT_SETTIME --- */

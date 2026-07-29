@@ -25,26 +25,12 @@
 
 #define MOUSE_PANEL_HEIGHT LV_PCT(20)
 
-#define __TIMESPEC_TO_MS(t) ((uint32_t) ((t)->tv_nsec/1000000 + (t)->tv_sec*1000))
-#define __TIMESPEC_TO_US(t) ((uint32_t) ((t)->tv_nsec/1000 + (t)->tv_sec*1000000))
-
 #if CONFIG_MM_IO_ENABLE_USB_HID
 
 static lv_indev_t *s_indev = NULL;
 static int s_fsm_running = 0;
 static struct mm_hid_action_s a;
 static mm_touchpad_t s_touchpad;
-
-static inline void __timespec_diff(struct timespec *result, const struct timespec *a, const struct timespec *b)
-{
-    if((a->tv_nsec - b->tv_nsec) < 0) {
-        result->tv_sec = a->tv_sec - b->tv_sec - 1;
-        result->tv_nsec = a->tv_nsec - b->tv_nsec + 1000000000L;
-    } else {
-        result->tv_sec = a->tv_sec - b->tv_sec;
-        result->tv_nsec = a->tv_nsec - b->tv_nsec;
-    }
-}
 
 static void __screen_loaded(lv_event_t *e)
 {
@@ -64,11 +50,11 @@ static void __background_pressing_handler(mm_event_t id, void *data)
 
     clock_gettime(CLOCK_MONOTONIC, &now);
     lv_indev_get_point(s_indev, &point);
-    __timespec_diff(&dt, &now, &last_triggered);
+    TIMESPEC_DIFF(&dt, &now, &last_triggered);
 
     /* determine key press/release */
 
-    out = mm_touchpad_fsm_tick(&s_touchpad, __TIMESPEC_TO_MS(&dt), point.x, point.y);
+    out = mm_touchpad_fsm_tick(&s_touchpad, TIMESPEC_TO_MS(&dt), point.x, point.y);
 
     if(out & MM_TP_LEFT_CLICK_DOWN) {
         a.u.mouse_report.buttons |= MM_KEY_TO_VALUE(MM_KEY_MOUSE_LEFT);
@@ -85,7 +71,7 @@ static void __background_pressing_handler(mm_event_t id, void *data)
 
     /* compute mouse pointer shift */
 
-    mm_touchpad_mouse_delta_acceleration(&s_touchpad, __TIMESPEC_TO_MS(&dt), point.x, point.y, &x, &y);
+    mm_touchpad_mouse_delta_acceleration(&s_touchpad, TIMESPEC_TO_MS(&dt), point.x, point.y, &x, &y);
 
     a.type = MM_HID_ACTION_MOUSE;
     a.u.mouse_report.x = 0;
