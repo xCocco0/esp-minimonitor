@@ -113,25 +113,33 @@ static int log_i = 0;
 
 static inline void __right_click_down(mm_touchpad_t *tp)
 {
+    #if __PRINT
     MM_LOG_I("Right click down");
+    #endif
     tp->data.pending_events |= MM_TP_RIGHT_CLICK_DOWN;
 }
 
 static inline void __right_click_up(mm_touchpad_t *tp)
 {
+    #if __PRINT
     MM_LOG_I("Right click up");
+    #endif
     tp->data.pending_events |= MM_TP_RIGHT_CLICK_UP;
 }
 
 static inline void __left_click_down(mm_touchpad_t *tp)
 {
+    #if __PRINT
     MM_LOG_I("Left click down");
+    #endif
     tp->data.pending_events |= MM_TP_LEFT_CLICK_DOWN;
 }
 
 static inline void __left_click_up(mm_touchpad_t *tp)
 {
+    #if __PRINT
     MM_LOG_I("Left click up");
+    #endif
     tp->data.pending_events |= MM_TP_LEFT_CLICK_UP;
 }
 
