@@ -21,7 +21,6 @@ struct __mm_ui_state_s {
     unsigned int active_meters;
     unsigned int pending_notifications;
     unsigned int panel_important;
-    unsigned int current_tile_id;
     unsigned int dnd_enabled;
     unsigned int autorotation_enabled;
     mm_rotation_t current_rotation;

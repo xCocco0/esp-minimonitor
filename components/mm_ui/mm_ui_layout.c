@@ -15,6 +15,7 @@
 #include "mm_font.h"
 #include "mm_ui_screen.h"
 #include "mm_ui_state.h"
+#include "mm_ui_tile.h"
 
 #define __OVERFLOW 30
 
@@ -96,7 +97,7 @@ void mm_ui_layout_switch(mm_layout_t layout)
         lv_obj_clear_flag(obj, LV_OBJ_FLAG_HIDDEN);
         break;
     case MM_LAYOUT_NOMETERS_DUAL:
-        lv_obj_set_parent(obj, mm_tiles.by_name.tile_main);
+        lv_obj_set_parent(obj, mm_ui_tile_get_root_obj(MM_UI_TILE_HOME));
         lv_obj_set_pos(obj, 0, -MM_PORT_BORDER_TOP-__OVERFLOW);
         lv_obj_set_style_pad_top(obj, __OVERFLOW, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_size(obj, MM_PORT_PANEL_NORMAL_WIDTH, MM_PORT_PANEL_NOTIF_TOP_HEIGHT+__OVERFLOW);

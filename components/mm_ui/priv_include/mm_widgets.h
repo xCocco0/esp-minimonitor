@@ -56,29 +56,6 @@ typedef struct __mm_widgets_s __mm_widgets_t;
 
 extern __mm_widgets_t mm_widgets;
 
-struct __mm_tiles_s {
-    lv_obj_t *tile_notif;
-    lv_obj_t *tile_main;
-    #if CONFIG_MM_IO_ENABLE_USB_OTG
-    lv_obj_t *tile_hid;
-    #endif
-    #if CONFIG_MM_UI_USE_CALENDAR
-    lv_obj_t *tile_calendar;
-    #endif
-};
-
-#define MM_UI_N_TILES (sizeof(struct __mm_tiles_s)/sizeof(lv_obj_t*))
-
-union __mm_tiles_u {
-    struct __mm_tiles_s by_name;
-    lv_obj_t *by_id[MM_UI_N_TILES];
-};
-
-typedef union __mm_tiles_u __mm_tiles_t;
-
-extern __mm_tiles_t mm_tiles;
-
-
 #ifdef __cplusplus
 }
 #endif

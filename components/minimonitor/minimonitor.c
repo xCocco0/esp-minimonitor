@@ -130,11 +130,15 @@ void mm_init(void)
     }
 
     /* restore hid controls */
-    hidconf.index = 0;
-    while(mm_hid_control_fetch_config(&hidconf) == MM_OK) {
-        mm_event_queue_confhid(&hidconf);
-        hidconf.index++;
+    #if CONFIG_MM_IO_ENABLE_USB_HID && CONFIG_MM_PORT_HAS_TOUCHSCREEN
+    if(mm_conf_get_as_integer(MM_CONF_DISABLE_TUSB) == 0) {
+        hidconf.index = 0;
+        while(mm_hid_control_fetch_config(&hidconf) == MM_OK) {
+            mm_event_queue_confhid(&hidconf);
+            hidconf.index++;
+        }
     }
+    #endif
 
     s_wifistatus_sema = xSemaphoreCreateBinary();
     MM_CHECK_E(s_wifistatus_sema != NULL);

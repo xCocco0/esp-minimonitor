@@ -26,6 +26,7 @@
 #include "mm_widgets.h"
 #include "mm_ui_notification.h"
 #include "mm_style.h"
+#include "mm_ui_tile.h"
 
 static int s_initialized = 0;
 
@@ -108,28 +109,31 @@ static void __change_tile_handler(mm_event_t id, void *data)
 {
     mm_tile_command_t cmd = (mm_tile_command_t) data;
     static int swiping_right = 1;
-    size_t cur_tile = mm_ui_state.current_tile_id;
+    size_t cur_tile = (size_t) mm_ui_tile_current;
     size_t next_tile;
 
     if(cur_tile == 0) {
         swiping_right = 1;
     }
-    if(cur_tile == (MM_UI_N_TILES-1)) {
+    if(cur_tile == (mm_ui_tile_get_count()-1)) {
         swiping_right = 0;
     }
 
     if(cmd == MM_TILE_SWIPE_LEFT || (cmd == MM_TILE_CYCLE && !swiping_right)) {
+        /* move 1 position to the left */
         next_tile = cur_tile > 0 ? cur_tile-1 : 0;
     } else if(cmd == MM_TILE_SWIPE_RIGHT || (cmd == MM_TILE_CYCLE && swiping_right)) {
-        next_tile = cur_tile < (MM_UI_N_TILES-1) ? cur_tile+1 : (MM_UI_N_TILES-1);
+        /* move 1 position to the right */
+        next_tile = cur_tile < (mm_ui_tile_get_count()-1) ? cur_tile+1 : (mm_ui_tile_get_count()-1);
     } else if(cmd == MM_TILE_HOME) {
-        next_tile = ((void *) &mm_tiles.by_name.tile_main - (void *) &mm_tiles)/sizeof(mm_tiles.by_id[0]);
+        /* move to home */
+        next_tile = (size_t) MM_UI_TILE_HOME;
         mm_ui_screen_switch(MM_SCREEN_MAIN);
     } else {
         return;
     }
 
-    mm_ui_screen_switch_tile_id(next_tile, 1);
+    mm_ui_tile_switch((mm_ui_tile_t) next_tile, 1);
 }
 
 static void __set_backlight_handler(mm_event_t id, void *data)
@@ -214,6 +218,7 @@ void mm_ui_init(void)
     mm_style_init();
 
     mm_ui_screen_create_all();
+
     for(int i = 0; i < MM_PORT_MAX_METERS; ++i) {
         s_meter_data[i].timeout_timer = lv_timer_create(__hide_meter_timeout_cb, -1, (void *) i);
         lv_timer_set_repeat_count(s_meter_data[i].timeout_timer, -1);
@@ -221,6 +226,7 @@ void mm_ui_init(void)
         s_meter_data[i].enabled = 0;
     }
     mm_ui_screen_switch(MM_SCREEN_MAIN);
+    mm_ui_tile_switch(MM_UI_TILE_HOME, 0);
     mm_layout_current = MM_LAYOUT_NOMETERS_SINGLE;
     mm_ui_layout_switch(mm_layout_current);
 
@@ -239,7 +245,11 @@ void mm_ui_init(void)
     mm_event_add_handler(MM_EVENT_BSOD, __bsod_handler);
     mm_event_add_handler(MM_EVENT_PERIODIC, __tick_handler);
     mm_event_add_handler(MM_EVENT_MOTION, __motion_gesture_handler);
-    mm_event_add_handler(MM_EVENT_CONFHID, __confhid_handler);
+    #if CONFIG_MM_IO_ENABLE_USB_HID && CONFIG_MM_PORT_HAS_TOUCHSCREEN
+    if(mm_conf_get_as_integer(MM_CONF_DISABLE_TUSB) == 0) {
+        mm_event_add_handler(MM_EVENT_CONFHID, __confhid_handler);
+    }
+    #endif
 
     mm_ui_rotate_screen(mm_conf_get_as_integer(MM_CONF_PREFERRED_ROTATION));
 

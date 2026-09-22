@@ -9,6 +9,7 @@
 
 #include "mm_hid_control.h"
 
+#include <stdio.h>
 #include "mm_persist.h"
 
 const char *mm_key2str_map[MM_KEY_ENUM_MAX] = {

@@ -20,12 +20,13 @@
 #include "mm_icon.h"
 #include "mm_style.h"
 #include "mm_ui.h"
+#include "mm_ui_tile.h"
 
 #if CONFIG_MM_PORT_HAS_TOUCHSCREEN
 
 static void __event_clear_button_cb(lv_event_t* event)
 {
-    mm_ui_screen_switch_tile(&mm_tiles.by_name.tile_main, 1);
+    mm_ui_tile_switch(MM_UI_TILE_HOME, 1);
     mm_ui_snooze(NULL);
 }
 

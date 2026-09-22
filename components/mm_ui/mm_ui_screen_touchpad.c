@@ -22,6 +22,7 @@
 #include "mm_font.h"
 #include "mm_widgets.h"
 #include "mm_touchpad.h"
+#include "mm_ui_tile.h"
 
 #define MOUSE_PANEL_HEIGHT LV_PCT(20)
 
@@ -139,7 +140,7 @@ static void __quit_pressed(lv_event_t *e)
         mm_event_delete_handler(MM_EVENT_BACKGROUND, __background_pressing_handler);
         s_fsm_running = 0;
         mm_ui_screen_switch(MM_SCREEN_MAIN);
-        mm_ui_screen_switch_tile(&mm_tiles.by_name.tile_hid, 0);
+        mm_ui_tile_switch(MM_UI_TILE_HID, 0);
     }
 }
 

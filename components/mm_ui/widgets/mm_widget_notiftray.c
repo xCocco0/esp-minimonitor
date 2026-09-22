@@ -17,6 +17,7 @@
 #include "mm_widgets.h"
 #include "mm_style.h"
 #include "mm_ui_screen.h"
+#include "mm_ui_tile.h"
 
 #define __ICON_DEFAULT_WIDTH (MM_IMG_SRC_BELL->img_dsc->header.w)
 
@@ -24,7 +25,7 @@
 
 static void __event_panel_pressed_cb(lv_event_t* event)
 {
-    mm_ui_screen_switch_tile(&mm_tiles.by_name.tile_notif, 1);
+    mm_ui_tile_switch(MM_UI_TILE_NOTIF, 1);
 }
 
 #endif

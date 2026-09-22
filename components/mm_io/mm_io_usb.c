@@ -110,20 +110,26 @@ static mm_err_t __send_report_mouse(int is_absolute, uint8_t buttons, int16_t x,
 static void __send_report_handler(mm_event_t id, void *data)
 {
     struct mm_hid_action_s *param = (struct mm_hid_action_s *) data;
+    static uint8_t sent_report[MM_HID_ACTIONS_N] = {};
+
+    sent_report[param->type] = 1;
 
     if(param->type == MM_HID_ACTION_RELEASE) {
         /* release pressed keys */
-
-        MM_LOG_I("Sending release keys");
-        __send_report_keyboard(0, NULL);
-        __send_report_mouse(0, 0, 0, 0, 0, 0);
-        __send_report_consumer(0);
-
+        if(sent_report[MM_HID_ACTION_MOUSE]) {
+            __send_report_mouse(0, 0, 0, 0, 0, 0);
+            sent_report[MM_HID_ACTION_MOUSE] = 0;
+        }
+        if(sent_report[MM_HID_ACTION_KEYBOARD]) {
+            __send_report_keyboard(0, NULL);
+            sent_report[MM_HID_ACTION_KEYBOARD] = 0;
+        }
+        if(sent_report[MM_HID_ACTION_CONSUMER]) {
+            __send_report_consumer(0);
+            sent_report[MM_HID_ACTION_CONSUMER] = 0;
+        }
     } else if(param->type == MM_HID_ACTION_MOUSE) {
         /* send a mouse event */
-
-        /* send the hid report */
-        MM_LOG_I("Sending mouse");
         __send_report_mouse(param->u.mouse_report.is_absolute, param->u.mouse_report.buttons,
                 param->u.mouse_report.x, param->u.mouse_report.y,
                 param->u.mouse_report.wheel, param->u.mouse_report.pad);
@@ -131,14 +137,10 @@ static void __send_report_handler(mm_event_t id, void *data)
 
     } else if(param->type == MM_HID_ACTION_KEYBOARD) {
         /* send a keyboard event */
-
-        MM_LOG_I("Sending keyboard");
         __send_report_keyboard(param->u.keyboard_report.modifiers, param->u.keyboard_report.keycode);
 
     } else if(param->type == MM_HID_ACTION_CONSUMER) {
         /* send a keyboard event */
-
-        MM_LOG_I("Sending consumer");
         __send_report_consumer(param->u.consumer_report.control);
 
 

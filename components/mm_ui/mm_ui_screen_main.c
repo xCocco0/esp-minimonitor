@@ -23,6 +23,12 @@
 #include "mm_ui_state.h"
 #include "mm_icon.h"
 #include "mm_style.h"
+#include "mm_ui_tile.h"
+
+static void __screen_loaded(lv_event_t *e)
+{
+    mm_ui_tile_switch(mm_ui_tile_current, 0);
+}
 
 #if CONFIG_MM_PORT_HAS_TOUCHSCREEN
 
@@ -131,7 +137,7 @@ void mm_ui_screen_create_main()
         #endif
 
         lv_obj_t *tile_main, *tile_notif, *tile_control;
-        #if CONFIG_MM_IO_ENABLE_USB_OTG
+        #if CONFIG_MM_IO_ENABLE_USB_HID && CONFIG_MM_PORT_HAS_TOUCHSCREEN
         lv_obj_t *tile_hid;
         lv_obj_t *hidactions;
         lv_obj_t *lbl_no_hid;
@@ -166,6 +172,8 @@ void mm_ui_screen_create_main()
                 free(bg_img_name);
         }
 
+        lv_obj_add_event_cb(screen_main, __screen_loaded, LV_EVENT_SCREEN_LOADED, NULL);
+
         /* --------------------------------------------------------------------------------------- */
 
         /* main tile */
@@ -174,7 +182,7 @@ void mm_ui_screen_create_main()
                         | LV_DIR_RIGHT
                         #endif
         );
-        mm_tiles.by_name.tile_main = tile_main;
+        mm_ui_tile_add_at_index(tile_main, MM_UI_TILE_HOME);
         lv_obj_set_size(tile_main, LV_PCT(100), LV_PCT(100));
         MM_STYLE_EMPTY_CONT(tile_main);
         lv_obj_set_style_pad_left(tile_main, MM_PORT_BORDER_LEFT, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -283,7 +291,7 @@ void mm_ui_screen_create_main()
         /* tile_notif */
         tile_notif = lv_tileview_add_tile(screen_main, 0, 1, LV_DIR_RIGHT);
         MM_STYLE_EMPTY_CONT(tile_notif);
-        mm_tiles.by_name.tile_notif = tile_notif;
+        mm_ui_tile_add_at_index(tile_notif, MM_UI_TILE_NOTIF);
         lv_obj_set_size(tile_notif, LV_PCT(100), LV_PCT(100));
         lv_obj_set_style_pad_all(tile_notif, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
         //MM_STYLE_EMPTY_CONT(tile_notif);
@@ -428,28 +436,29 @@ void mm_ui_screen_create_main()
         /* --------------------------------------------------------------------------------------- */
 
         #if CONFIG_MM_IO_ENABLE_USB_HID && CONFIG_MM_PORT_HAS_TOUCHSCREEN
+        if(mm_conf_get_as_integer(MM_CONF_DISABLE_TUSB) == 0) {
 
-        tile_hid = lv_tileview_add_tile(screen_main, 2, 1, LV_DIR_LEFT | LV_DIR_RIGHT);
-        mm_tiles.by_name.tile_hid = tile_hid;
-        MM_STYLE_EMPTY_CONT(tile_hid);
-        lv_obj_set_size(tile_hid, LV_PCT(100), LV_PCT(100));
-        lv_obj_set_style_pad_all(tile_hid, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+            tile_hid = lv_tileview_add_tile(screen_main, 2, 1, LV_DIR_LEFT | LV_DIR_RIGHT);
+            mm_ui_tile_add_at_index(tile_hid, MM_UI_TILE_HID);
+            MM_STYLE_EMPTY_CONT(tile_hid);
+            lv_obj_set_size(tile_hid, LV_PCT(100), LV_PCT(100));
+            lv_obj_set_style_pad_all(tile_hid, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-        hidactions = mm_widget_hidactions_create(tile_hid);
-        mm_widgets.hidactions = hidactions;
-        lv_obj_center(hidactions);
-        lv_obj_set_size(hidactions, LV_PCT(100), LV_PCT(100));
-        lv_obj_set_style_pad_row(hidactions, MM_PORT_BORDER_INNER, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_pad_top(hidactions, MM_PORT_BORDER_TOP, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_pad_left(hidactions, MM_PORT_BORDER_LEFT, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_pad_right(hidactions, MM_PORT_BORDER_RIGHT, LV_PART_MAIN | LV_STATE_DEFAULT);
+            hidactions = mm_widget_hidactions_create(tile_hid);
+            mm_widgets.hidactions = hidactions;
+            lv_obj_center(hidactions);
+            lv_obj_set_size(hidactions, LV_PCT(100), LV_PCT(100));
+            lv_obj_set_style_pad_row(hidactions, MM_PORT_BORDER_INNER, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_pad_top(hidactions, MM_PORT_BORDER_TOP, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_pad_left(hidactions, MM_PORT_BORDER_LEFT, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_pad_right(hidactions, MM_PORT_BORDER_RIGHT, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-        lbl_no_hid = lv_label_create(tile_hid);
-        mm_widgets.lbl_no_hid = lbl_no_hid;
-        lv_obj_center(lbl_no_hid);
-        lv_label_set_text(lbl_no_hid, "No HID controls");
-        lv_obj_set_style_text_font(lbl_no_hid, MM_FONT_SMALL, LV_PART_MAIN | LV_STATE_DEFAULT);
-
+            lbl_no_hid = lv_label_create(tile_hid);
+            mm_widgets.lbl_no_hid = lbl_no_hid;
+            lv_obj_center(lbl_no_hid);
+            lv_label_set_text(lbl_no_hid, "No HID controls");
+            lv_obj_set_style_text_font(lbl_no_hid, MM_FONT_SMALL, LV_PART_MAIN | LV_STATE_DEFAULT);
+        }
         #endif
 
         /* --------------------------------------------------------------------------------------- */
@@ -457,7 +466,7 @@ void mm_ui_screen_create_main()
         #if CONFIG_MM_UI_USE_CALENDAR
 
         tile_calendar = lv_tileview_add_tile(screen_main, 3, 1, LV_DIR_LEFT);
-        mm_tiles.by_name.tile_calendar = tile_calendar;
+        mm_ui_tile_add_at_index(tile_calendar, MM_UI_TILE_CALENDAR);
         MM_STYLE_EMPTY_CONT(tile_calendar);
         lv_obj_set_size(tile_calendar, LV_PCT(100), LV_PCT(100));
         lv_obj_set_style_pad_row(tile_calendar, MM_PORT_BORDER_INNER, LV_PART_MAIN | LV_STATE_DEFAULT);

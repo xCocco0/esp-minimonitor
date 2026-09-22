@@ -64,6 +64,7 @@ idf_component_register(SRCS
                         "mm_ui_state.c"
                         "mm_ui_layout.c"
                         "mm_ui_notification.c"
+                        "mm_ui_tile.c"
                         "mm_img.c"
                         "mm_style.c"
                         "mm_widgets.c"

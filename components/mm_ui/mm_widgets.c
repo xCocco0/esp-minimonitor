@@ -10,4 +10,3 @@
 #include "mm_widgets.h"
 
 __mm_widgets_t mm_widgets = {0};
-__mm_tiles_t mm_tiles = {0};

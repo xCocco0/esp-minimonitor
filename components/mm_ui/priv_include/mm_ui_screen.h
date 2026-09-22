@@ -36,9 +36,7 @@ void mm_ui_screen_create_all(void);
 
 void mm_ui_screen_switch(mm_screen_t screen);
 
-void mm_ui_screen_switch_tile_id(size_t id, int animated);
-void mm_ui_screen_switch_tile(lv_obj_t **tile, int animated);
-
+lv_obj_t *mm_ui_screen_get_root_obj(mm_screen_t screen);
 
 #ifdef __cplusplus
 }

@@ -35,7 +35,6 @@ void mm_ui_set_meter_enable(int index);
 void mm_ui_set_meter_disable(int index);
 void mm_ui_set_meter(int index, uint32_t value1, uint32_t value2, uint32_t valueP);
 
-void mm_ui_tile_cycle(void);
 void mm_ui_rotate_screen(mm_rotation_t rot);
 
 #ifdef __cplusplus

@@ -1564,7 +1564,9 @@ void mm_cli_cmd_register_all(void)
     MM_CHECK_E(__register_log() == ESP_OK);
     MM_CHECK_E(__register_rotate() == ESP_OK);
     #if CONFIG_MM_IO_ENABLE_USB_HID
-    MM_CHECK_E(__register_hidconfig() == ESP_OK);
+    if(mm_conf_get_as_integer(MM_CONF_DISABLE_TUSB) == 0) {
+        MM_CHECK_E(__register_hidconfig() == ESP_OK);
+    }
     #endif
     MM_CHECK_E(__register_info() == ESP_OK);
 }

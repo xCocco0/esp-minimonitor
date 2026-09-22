@@ -28,8 +28,6 @@ void mm_ui_screen_create_all(void)
     mm_ui_screen_create_panic();
     mm_ui_screen_create_touchpad();
 
-    mm_ui_screen_switch_tile(&mm_tiles.by_name.tile_main, 0);
-
     init = 1;
 }
 
@@ -43,20 +41,10 @@ void mm_ui_screen_switch(mm_screen_t screen)
 
     lv_scr_load(mm_screen_root[screen]);
     mm_screen_current = screen;
-
-    lv_obj_set_tile(mm_screen_root[MM_SCREEN_MAIN], mm_tiles.by_id[mm_ui_state.current_tile_id], CONFIG_MM_UI_ANIMATED ? LV_ANIM_ON : LV_ANIM_OFF);
 }
 
-void mm_ui_screen_switch_tile_id(size_t id, int animated)
+lv_obj_t *mm_ui_screen_get_root_obj(mm_screen_t screen)
 {
-    mm_ui_state.current_tile_id = id;
-    lv_obj_set_tile(mm_screen_root[MM_SCREEN_MAIN], mm_tiles.by_id[id], CONFIG_MM_UI_ANIMATED ? animated : LV_ANIM_OFF);
-}
-
-void mm_ui_screen_switch_tile(lv_obj_t **tile, int animated)
-{
-    size_t id = ((void *) tile - (void *) &mm_tiles)/sizeof(mm_tiles.by_id[0]);
-    if(id < MM_UI_N_TILES) {
-        mm_ui_screen_switch_tile_id(id, animated);
-    }
+    MM_CHECK_E(screen < MM_N_SCREENS);
+    return mm_screen_root[screen];
 }
