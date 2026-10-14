@@ -13,6 +13,7 @@
 #include "mm_event.h"
 #include "mm_conf.h"
 #include "mm_macros.h"
+#include "mm_hid_scheduler.h"
 #include "mm_port_ui_customization.h"
 #include "mm_widgets.h"
 #include "mm_style.h"
@@ -23,12 +24,11 @@
    touching for more than this is considered a tap only if no scrolling is detected */
 #define SCROLL_THRESHOLD_MS 150
 
-/* We share 1 release timer for all controls */
-static lv_timer_t *s_release_timer = NULL;
-static mm_widget_hidactions_control_t *s_current_touchpad = NULL;
+#define __PRESS_START 0x1
+#define __PRESS_END   0x2
 
-static void __release_timer_cb(lv_timer_t *timer);
-static void __autoclick_timer_cb(lv_timer_t *timer);
+/* We share 1 release timer for all controls */
+static mm_widget_hidactions_control_t *s_current_touchpad = NULL;
 
 lv_obj_t *mm_widget_hidactions_create(lv_obj_t *parent)
 {
@@ -40,13 +40,6 @@ lv_obj_t *mm_widget_hidactions_create(lv_obj_t *parent)
 
     MM_STYLE_EMPTY_CONT(c_obj);
 
-    /* release timer is shared by all */
-    if(s_release_timer == NULL) {
-        s_release_timer = lv_timer_create(__release_timer_cb, CONFIG_MM_HID_DEFAULT_PRESS_DURATION_MS, NULL);
-        lv_timer_set_repeat_count(s_release_timer, -1);
-        lv_timer_pause(s_release_timer);
-    }
-
     return c_obj;
 }
 
@@ -55,110 +48,49 @@ void mm_widget_hidactions_delete(lv_obj_t *widget)
     lv_obj_del(widget);
 }
 
-static inline void __send_events(mm_widget_hidactions_control_t *c)
+/* this function filters out ghost clicks (i.e. when the user scrolls the UI) */
+static int __compute_press_actions(uint32_t *last_pressed, lv_event_code_t code)
 {
-    if(c->act_kb.type == MM_HID_ACTION_KEYBOARD) {
-        mm_event_queue_sendhid(&c->act_kb);
-    }
-    if(c->act_m.type == MM_HID_ACTION_MOUSE) {
-        mm_event_queue_sendhid(&c->act_m);
-    }
-    if(c->act_c.type == MM_HID_ACTION_CONSUMER) {
-        mm_event_queue_sendhid(&c->act_c);
-    }
-}
-static void __button_cb(lv_event_t *e)
-{
-    lv_event_code_t code = lv_event_get_code(e);
-    lv_obj_t *btn = lv_event_get_target(e);
-    mm_widget_hidactions_control_t *c = lv_event_get_user_data(e);
-    lv_indev_t * indev = lv_indev_get_act();
-    int btn_index = 0;
-    mm_key_t *keyv;
     uint32_t delta;
+    lv_indev_t * indev = lv_indev_get_act();
+    int ret = 0;
 
-    for(int i = 0; i < lv_obj_get_child_cnt(&c->panel); i++) {
-        lv_obj_t * child = lv_obj_get_child(&c->panel, i);
+    if(code == LV_EVENT_CLICKED) {
+        return __PRESS_START | __PRESS_END;
+    } else if(code == LV_EVENT_PRESSED) {
+        *last_pressed = lv_tick_get();
+    } else if(code == LV_EVENT_PRESSING) {
 
-        if (child != NULL && lv_obj_check_type(child, &lv_btn_class)) {
-            if(child == btn) {
-                break;
-            } else {
-                btn_index++;
+        if(*last_pressed) {
+            delta = lv_tick_get() - *last_pressed;
+
+            if(lv_indev_get_scroll_obj(indev)) {
+                /* we started scrolling, skip button press until new PRESSED event */
+            } else if(delta > SCROLL_THRESHOLD_MS) {
+                /* we clicked for long enough without triggering a scroll */
+                ret |= __PRESS_START;
+                *last_pressed = 0;
             }
         }
-    }
-
-    if(c->conf.type == MM_HID_CONTROL_AUTOCLICK) {
-        if(c->repeat_timer) {
-            /* periodic click */
-            if(c->pressed) {
-                lv_timer_pause(c->repeat_timer);
-                lv_timer_pause(s_release_timer);
-                __release_timer_cb(NULL);
-                c->pressed = 0;
-            } else {
-                c->repeat_timer->user_data = (void *) c;
-                lv_timer_ready(c->repeat_timer);
-                lv_timer_resume(c->repeat_timer);
-                c->pressed = 1;
+    } else if(code == LV_EVENT_RELEASED) {
+        if(*last_pressed) {
+            delta = lv_tick_get() - *last_pressed;
+            if(delta < SCROLL_THRESHOLD_MS) {
+                /* this is a short click */
+                ret |= __PRESS_START;
+                *last_pressed = 0;
             }
-        } else if(c->conf.u.autoclicker.duration_ms > 0) {
-            /* single click */
-            lv_timer_reset(s_release_timer);
-            lv_timer_set_period(s_release_timer, c->conf.u.autoclicker.duration_ms);
-            lv_timer_resume(s_release_timer);
-            __send_events(c);
+        }
+        if(*last_pressed == 0) {
+            /* was pressed before */
+            ret |= __PRESS_END;
         } else {
-            /* toggle click */
-            if(c->pressed) {
-                __release_timer_cb(NULL);
-                c->pressed = 0;
-            } else {
-                __send_events(c);
-                c->pressed = 1;
-            }
-        }
-    } else if(c->conf.type == MM_HID_CONTROL_MATRIX) {
-
-        keyv = &c->conf.u.matrix.keys[btn_index][0];
-
-        if(code == LV_EVENT_PRESSED) {
-            c->pressed = lv_tick_get();
-        } else if(code == LV_EVENT_PRESSING) {
-
-            if(c->pressed) {
-                delta = lv_tick_get() - c->pressed;
-
-                if(lv_indev_get_scroll_obj(indev)) {
-                    /* we started scrolling, skip button press until new PRESSED event */
-                } else if(delta > SCROLL_THRESHOLD_MS) {
-                    /* we clicked for long enough without triggering a scroll */
-                    mm_hid_control_key_arr_to_action(&c->act_m, &c->act_kb, &c->act_c, keyv, sizeof(c->conf.u.matrix.keys[0]), c->conf.u.matrix.intensity);
-                    /* note: we reuse kb for both keyboard and mouse */
-                    __send_events(c);
-                    c->pressed = 0;
-                }
-            }
-        } else if(code == LV_EVENT_RELEASED) {
-            if(c->pressed) {
-                delta = lv_tick_get() - c->pressed;
-                if(delta < SCROLL_THRESHOLD_MS) {
-                    /* this is a short click */
-                    mm_hid_control_key_arr_to_action(&c->act_m, &c->act_kb, &c->act_c, keyv, sizeof(c->conf.u.matrix.keys[0]), c->conf.u.matrix.intensity);
-                    __send_events(c);
-                    c->pressed = 0;
-                }
-            }
-            if(c->pressed == 0) {
-                /* was pressed before */
-                __release_timer_cb(NULL);
-            } else {
-                /* we never really pressed the button */
-                c->pressed = 0;
-            }
+            /* we never really pressed the button */
+            *last_pressed = 0;
         }
     }
+
+    return ret;
 }
 
 static void __open_touchpad(lv_event_t *e)
@@ -169,47 +101,123 @@ static void __open_touchpad(lv_event_t *e)
     mm_ui_screen_switch(MM_SCREEN_TOUCHPAD);
 }
 
-static void __release_timer_cb(lv_timer_t *timer)
-{
-    struct mm_hid_action_s release = {
-        .type = MM_HID_ACTION_RELEASE,
-    };
+/*                       START                       STOP
+    SINGLE : periodic  : none                        none
+             aperiodic : queue_macro                 none
+    TOGGLE : periodic  : queue_periodic/cancel       none
+             aperiodic : queue_down                  queue_up
+    HOLD   : periodic  : queue_periodic              cancel
+      MATRIX/aperiodic : queue_down                  queue_up
+*/
 
-    mm_event_queue_sendhid(&release);
-    if(timer) {
-        lv_timer_pause(timer);
+static void __send_hid_scheduler_quick_press(uint32_t *id, const char *macro)
+{
+    *id = mm_hid_scheduler_queue_macro(macro);
+}
+
+static void __send_hid_scheduler_start_press(uint32_t *id, const char *macro, uint32_t period_ms, uint32_t jitter_ms)
+{
+    /* periodic: queue periodic event (key-down + key-up)
+       else:     queue only key-down event */
+    if(period_ms) {
+        *id = mm_hid_scheduler_queue_periodic(macro, UINT32_MAX, period_ms, jitter_ms);
+    } else {
+        *id = mm_hid_scheduler_queue_down(macro);
     }
 }
 
-static void __autoclick_timer_cb(lv_timer_t *timer)
+static void __send_hid_scheduler_stop_press(uint32_t *id, const char *macro, uint32_t period_ms, uint32_t jitter_ms)
 {
-    uint32_t rnd;
-    int32_t variation = 0;
-    int16_t signed_rnd;
-    mm_widget_hidactions_control_t *c = (mm_widget_hidactions_control_t *) timer->user_data;
+    (void) jitter_ms;
+    /* periodic: cancel periodic event + key-up
+       else:     queue only key-up event */
+    if(period_ms) {
+        mm_hid_scheduler_cancel(*id);
+    }
+    *id = mm_hid_scheduler_queue_up(macro);
+}
 
-    MM_CHECK_W(c->conf.type == MM_HID_CONTROL_AUTOCLICK);
-    MM_CHECK_E(s_release_timer != NULL);
+static void __button_cb(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *btn = lv_event_get_target(e);
+    mm_widget_hidactions_control_t *c = lv_event_get_user_data(e);
+    int btn_index = 0;
 
-    if(c->conf.u.autoclicker.jitter_ms > 0) {
-        rnd = esp_random();
+    int press;
+    mm_hid_press_behaviour_t press_bhv;
+    char *macro = NULL;
+    uint32_t period_ms = 0, jitter_ms = 0;
 
-        #if 1 /* Triangular distribution */
-        signed_rnd = (int16_t) (rnd & UINT8_MAX) - (int16_t) ((rnd >> 8) & UINT8_MAX);
-        variation = (int32_t)((signed_rnd * c->conf.u.autoclicker.jitter_ms) / UINT8_MAX);
-        #else /* Uniform distribution */
-        (void ) signed_rnd;
-        variation = (rnd % (2 * c->conf.u.autoclicker.jitter_ms)) - c->conf.u.autoclicker.jitter_ms;
-        #endif
+    if(c->conf->type == MM_HID_CONTROL_AUTOCLICK) {
+        press_bhv = c->conf->u.autoclicker.press_bhv;
+        macro = c->conf->u.autoclicker.macro;
+        if(press_bhv != MM_HID_PRESS_ONCE) {
+            period_ms = c->conf->u.autoclicker.period_ms;
+            jitter_ms = c->conf->u.autoclicker.jitter_ms;
+        }
+    } else if(c->conf->type == MM_HID_CONTROL_MATRIX) {
+        /* find which button triggered the event */
+        for(int i = 0; i < lv_obj_get_child_cnt(&c->panel); i++) {
+            lv_obj_t * child = lv_obj_get_child(&c->panel, i);
 
-        lv_timer_set_period(timer, c->conf.u.autoclicker.period_ms + variation);
+            if (child != NULL && lv_obj_check_type(child, &lv_btn_class)) {
+                if(child == btn) {
+                    break;
+                } else {
+                    btn_index++;
+                }
+            }
+        }
+        /* note: MATRIX buttons use PRESS_HOLD */
+        press_bhv = MM_HID_PRESS_HOLD;
+        macro = c->conf->u.matrix.macro_v[btn_index];
+    } else if(c->conf->type == MM_HID_CONTROL_TOUCHPAD) {
+        press_bhv = MM_HID_PRESS_ONCE;
+    } else {
+        return;
     }
 
-    lv_timer_reset(s_release_timer);
-    lv_timer_set_period(s_release_timer, c->conf.u.autoclicker.duration_ms);
-    lv_timer_resume(s_release_timer);
+    press = __compute_press_actions(&c->last_pressed, code);
 
-    __send_events(c);
+    switch(press_bhv) {
+        case MM_HID_PRESS_ONCE:
+            if(press & __PRESS_START) {
+                if(c->conf->type == MM_HID_CONTROL_MATRIX) {
+                    s_current_touchpad = (mm_widget_hidactions_control_t *) lv_event_get_user_data(e);
+                    MM_LOG_I("Opening touchpad");
+                    mm_ui_screen_switch(MM_SCREEN_TOUCHPAD);
+                } else {
+                    __send_hid_scheduler_quick_press(&c->cur_id, macro);
+                }
+            }
+            if(press & __PRESS_END) {
+                c->last_pressed = 0;
+            }
+            break;
+        case MM_HID_PRESS_TOGGLE:
+            if(press & __PRESS_START) {
+                if(!c->key_down) {
+                    __send_hid_scheduler_start_press(&c->cur_id, macro, period_ms, jitter_ms);
+                    c->key_down = 1;
+                } else {
+                    __send_hid_scheduler_stop_press(&c->cur_id, macro, period_ms, jitter_ms);
+                    c->key_down = 0;
+                }
+            }
+            break;
+        case MM_HID_PRESS_HOLD:
+            if(press & __PRESS_START) {
+                __send_hid_scheduler_start_press(&c->cur_id, macro, period_ms, jitter_ms);
+            }
+            if(press & __PRESS_END) {
+                __send_hid_scheduler_stop_press(&c->cur_id, macro, period_ms, jitter_ms);
+                c->last_pressed = 0;
+            }
+            break;
+        default:
+            break;
+    }
 }
 
 void mm_hidactions_control_constructor(const lv_obj_class_t *class_p, lv_obj_t *obj)
@@ -217,28 +225,95 @@ void mm_hidactions_control_constructor(const lv_obj_class_t *class_p, lv_obj_t *
     LV_UNUSED(class_p);
     mm_widget_hidactions_control_t * c = (mm_widget_hidactions_control_t *) obj;
 
-    c->repeat_timer = NULL;
-    c->pressed = 0;
+    c->last_pressed = 0;
+    c->cur_id = 0;
 
     lv_obj_set_size(obj, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
 }
 
 void mm_hidactions_control_destructor(const lv_obj_class_t *class_p, lv_obj_t *obj)
 {
-    mm_widget_hidactions_control_t * c = (mm_widget_hidactions_control_t *)obj;
+    mm_widget_hidactions_control_t *c = (mm_widget_hidactions_control_t *) obj;
+    mm_hid_press_behaviour_t press_bhv;
+    char *macro = NULL;
+    uint32_t period_ms = 0, jitter_ms = 0;
     LV_UNUSED(class_p);
 
-    if(c->repeat_timer != NULL) {
-        lv_timer_del(c->repeat_timer);
-        c->repeat_timer = NULL;
+    /* release buttons */
+    if(c->conf->type == MM_HID_CONTROL_AUTOCLICK) {
+        press_bhv = c->conf->u.autoclicker.press_bhv;
+        macro = c->conf->u.autoclicker.macro;
+        if(press_bhv == MM_HID_PRESS_TOGGLE || press_bhv == MM_HID_PRESS_HOLD) {
+            period_ms = c->conf->u.autoclicker.period_ms;
+            jitter_ms = c->conf->u.autoclicker.jitter_ms;
+            __send_hid_scheduler_stop_press(&c->cur_id, macro, period_ms, jitter_ms);
+        }
+    } else if(c->conf->type == MM_HID_CONTROL_MATRIX) {
+        /* find which button triggered the event */
+        for(int i = 0; i < c->conf->u.matrix.n_buttons; ++i) {
+            macro = c->conf->u.matrix.macro_v[i];
+            __send_hid_scheduler_stop_press(&c->cur_id, macro, 0, 0);
+        }
     }
-
-    lv_timer_pause(s_release_timer);
-    __release_timer_cb(NULL);
 }
 
-struct mm_hid_control_config_s *mm_widget_hidaction_last_touchpad_config(void) {
-    return &s_current_touchpad->conf;
+struct mm_hid_control_config_s *mm_widget_hidaction_last_touchpad_config(void)
+{
+    return s_current_touchpad->conf;
+}
+
+static uint32_t __pow(uint32_t x, uint32_t n)
+{
+    uint32_t ret = 1;
+    while(n--) {
+        ret *= x;
+    }
+    return ret;
+}
+
+static const char *__fmt_period(uint32_t ms)
+{
+    static char buf[16];
+    int shift = 3;
+    ldiv_t split;
+    uint32_t d = ms;
+
+    /* increase to show more decimals, 10^n -> at most n
+       decimals (values greater than 1000 have no effect) */
+    #define __DGT 1000
+
+    if(d < 1000) {
+        /* print as-is */
+        sprintf(buf, "%"PRIu32"ms", ms);
+    } else {
+        while(d >= __DGT && shift > 0) {
+            /* just dry run */
+            d /= 10;
+            shift--;
+        }
+
+        if(shift != 3) {
+            /* restore original value */
+            d = ms;
+            /* actual division, with the correct approximation */
+            d = ROUND_DIV(d, __pow(10, 3 - shift));
+        }
+
+        while((d % 10) == 0 && shift > 0) {
+            d /= 10;
+            shift--;
+        }
+
+        if(shift > 0) {
+            split = ldiv((long) d, (long) __pow(10, shift));
+            sprintf(buf, "%ld.%0*lds", split.quot, shift, split.rem);
+        } else {
+            /* no decimals */
+            sprintf(buf, "%"PRIu32"s", d);
+        }
+    }
+
+    return (const char *) buf;
 }
 
 #define __BTN_LBL_BUFSIZE CONFIG_MM_HID_MAX_NKRO*4
@@ -252,7 +327,8 @@ lv_obj_t *mm_widget_hidactions_control_add(lv_obj_t *parent, struct mm_hid_contr
     mm_widget_hidactions_control_t *c;
     const mm_img_src_t *ico;
     int index;
-    char buf[__BTN_LBL_BUFSIZE];
+    mm_key_t key;
+    mm_hid_press_behaviour_t press;
 
     MM_CHECK_E(parent);
     MM_CHECK_E(conf);
@@ -269,7 +345,7 @@ lv_obj_t *mm_widget_hidactions_control_add(lv_obj_t *parent, struct mm_hid_contr
        this is basically insertion sort */
     for(int i = 0; i < lv_obj_get_child_cnt(parent) - 1; ++i) {
         obj = lv_obj_get_child(parent, i);
-        index = lv_obj_has_class(obj, &mm_hidactions_control_class) ? ((mm_widget_hidactions_control_t *) obj)->conf.index : UINT16_MAX;
+        index = lv_obj_has_class(obj, &mm_hidactions_control_class) ? ((mm_widget_hidactions_control_t *) obj)->conf->index : UINT16_MAX;
         if(index > conf->index) {
             lv_obj_move_to_index(c_obj, i);
             break;
@@ -282,42 +358,50 @@ lv_obj_t *mm_widget_hidactions_control_add(lv_obj_t *parent, struct mm_hid_contr
     c = (mm_widget_hidactions_control_t *) c_obj;
     /* prepare control struct (timers are configured later) */
     primary_color = mm_conf_get_as_integer(MM_CONF_COLOR_PRIMARY);
-    memcpy(&c->conf, conf, sizeof(struct mm_hid_control_config_s));
-    c->repeat_timer = NULL;
-    c->pressed = 0;
+    c->conf = mm_hid_control_config_deepcopy(conf);
+    c->cur_id = 0;
+    c->last_pressed = 0;
 
     if(conf->type == MM_HID_CONTROL_AUTOCLICK) {
-        mm_hid_control_config_to_action(&c->act_m, &c->act_kb, &c->act_c, &c->conf);
+
+        press = conf->u.autoclicker.press_bhv;
 
         lv_obj_set_style_layout(c_obj, LV_LAYOUT_FLEX, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_flex_flow(c_obj, LV_FLEX_FLOW_ROW, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_flex_cross_place(c_obj, LV_FLEX_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
 
         ico = NULL;
-        if(strnlen(conf->u.autoclicker.icon, sizeof(conf->u.autoclicker.icon)) > 0) {
-            ico = mm_img_src(conf->u.autoclicker.icon);
+        if(conf->u.autoclicker.icon) {
+            if(strnlen(conf->u.autoclicker.icon, sizeof(conf->u.autoclicker.icon)) > 0) {
+                ico = mm_img_src(conf->u.autoclicker.icon);
+            }
         }
         if(!ico) {
-            /* default icon */
-            if(c->act_m.type == MM_HID_ACTION_MOUSE) {
+            /* set default icon based on first key in the macro */
+            key = mm_hid_control_find_key_prefix(conf->u.autoclicker.macro);
+            if(MM_KEY_IS_MOUSE(key)) {
                 ico = MM_IMG_SRC_CLICK;
             } else {
                 ico = MM_IMG_SRC_TAP;
             }
         }
 
-        if(conf->u.autoclicker.duration_ms > 0 && conf->u.autoclicker.period_ms == 0) {
-            /* single click */
-            btn = mm_widget_button_create(c_obj, ico, primary_color);
-        } else {
+        if(press == MM_HID_PRESS_TOGGLE) {
             btn = mm_widget_button_create_checkable(c_obj, ico, primary_color, 0);
+            lv_obj_add_event_cb(btn->button, __button_cb, LV_EVENT_CLICKED, (void *) c);
+        } else {
+            /* single click or hold */
+            btn = mm_widget_button_create(c_obj, ico, primary_color);
+            if(press == MM_HID_PRESS_HOLD) {
+                lv_obj_add_event_cb(btn->button, __button_cb, LV_EVENT_PRESSED, (void *) c);
+                lv_obj_add_event_cb(btn->button, __button_cb, LV_EVENT_PRESSING, (void *) c);
+                lv_obj_add_event_cb(btn->button, __button_cb, LV_EVENT_RELEASED, (void *) c);
+            } else {
+                lv_obj_add_event_cb(btn->button, __button_cb, LV_EVENT_CLICKED, (void *) c);
+            }
         }
 
-        lv_obj_add_event_cb(btn->button, __button_cb, LV_EVENT_CLICKED, (void *) c);
-
         free(btn);
-
-        mm_hid_control_keycode_to_fullname(buf, sizeof(buf), conf->u.autoclicker.keys, CONFIG_MM_HID_MAX_NKRO);
 
         text_cont = lv_obj_create(c_obj);
         MM_STYLE_EMPTY_CONT(text_cont);
@@ -332,7 +416,7 @@ lv_obj_t *mm_widget_hidactions_control_add(lv_obj_t *parent, struct mm_hid_contr
         lv_label_set_long_mode(obj, LV_LABEL_LONG_SCROLL);
         lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_text_font(obj, MM_FONT_SMALL, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_label_set_text_fmt(obj, "[%s]", buf);
+        lv_label_set_text_fmt(obj, "[%s]", conf->u.autoclicker.macro);
 
         obj = lv_label_create(text_cont);
         lv_obj_set_size(obj, LV_PCT(100), LV_SIZE_CONTENT);
@@ -340,25 +424,17 @@ lv_obj_t *mm_widget_hidactions_control_add(lv_obj_t *parent, struct mm_hid_contr
         lv_obj_set_style_text_align(obj, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_text_font(obj, MM_FONT_VERY_SMALL, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-        if(conf->u.autoclicker.duration_ms == 0) {
-            /* toggle click */
-            lv_label_set_text_static(obj, "Press to toggle");
-            c->repeat_timer = NULL;
+        /* set label depending on press behaviour */
+        if(conf->u.autoclicker.period_ms == 0 || press == MM_HID_PRESS_ONCE) {
+            lv_label_set_text_static(obj, conf->u.autoclicker.press_bhv == MM_HID_PRESS_ONCE ?
+                    "Press to run" : conf->u.autoclicker.press_bhv == MM_HID_PRESS_TOGGLE ?
+                    "Press to toggle" : "Hold to run"
+            );
         } else {
-
-            if(conf->u.autoclicker.period_ms == 0) {
-                /* single click */
-                lv_label_set_text_fmt(obj, "Press time: %"PRIu32"ms", conf->u.autoclicker.duration_ms);
-                c->repeat_timer = NULL;
-            } else {
-                /* periodic click */
-                lv_label_set_text_fmt(obj, "Autoclick: %"PRIu32"ms", conf->u.autoclicker.period_ms);
-
-                c->repeat_timer = lv_timer_create(__autoclick_timer_cb, conf->u.autoclicker.period_ms, (void *) c);
-                lv_timer_set_repeat_count(c->repeat_timer, -1);
-                lv_timer_pause(c->repeat_timer);
-                c->conf.u.autoclicker.duration_ms = MIN(conf->u.autoclicker.duration_ms, conf->u.autoclicker.period_ms);
-            }
+            lv_label_set_text_fmt(obj, "%s (%s)", conf->u.autoclicker.press_bhv == MM_HID_PRESS_TOGGLE ?
+                    "Toggle periodic" : "Hold periodic",
+                    __fmt_period(conf->u.autoclicker.period_ms)
+            );
         }
 
     } else if(conf->type == MM_HID_CONTROL_MATRIX) {
@@ -366,25 +442,24 @@ lv_obj_t *mm_widget_hidactions_control_add(lv_obj_t *parent, struct mm_hid_contr
         lv_obj_set_style_flex_flow(c_obj, LV_FLEX_FLOW_ROW_WRAP, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_flex_main_place(c_obj, LV_FLEX_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
 
-        for(int i = 0; i < CONFIG_MM_HID_CONTROL_MATRIX_MAX_BTN; ++i) {
-            if(conf->u.matrix.keys[i][0] == 0) {
-                /* not a button */
+        for(int i = 0; i < conf->u.matrix.n_buttons; ++i) {
+            if(conf->u.matrix.macro_v[i] == NULL) {
                 continue;
             }
 
             ico = NULL;
-            if(strnlen(conf->u.matrix.icons[i], sizeof(conf->u.matrix.icons[0])) > 0) {
-                ico = mm_img_src(conf->u.matrix.icons[i]);
+            if(conf->u.matrix.icon_v[i]) {
+                ico = mm_img_src(conf->u.matrix.icon_v[i]);
                 if(ico) {
                     btn = mm_widget_button_create(c_obj, ico, primary_color);
                 } else {
                     /* icon not found: reuse icon name as label  */
-                    btn = mm_widget_button_create_with_text(c_obj, conf->u.matrix.icons[i], primary_color);
+                    btn = mm_widget_button_create_with_text(c_obj, conf->u.matrix.icon_v[i], primary_color);
                 }
             } else {
                 /* generate a new name from key names */
-                mm_hid_control_keycode_to_fullname(buf, sizeof(buf), conf->u.matrix.keys[i], CONFIG_MM_HID_MAX_NKRO);
-                btn = mm_widget_button_create_with_text(c_obj, buf, primary_color);
+                key = mm_hid_control_find_key_prefix(conf->u.matrix.macro_v[i]);
+                btn = mm_widget_button_create_with_text(c_obj, key ? MM_KEY_TO_STR(key) : "", primary_color);
             }
 
             lv_obj_add_event_cb(btn->button, __button_cb, LV_EVENT_PRESSED, (void *) c);
@@ -393,12 +468,6 @@ lv_obj_t *mm_widget_hidactions_control_add(lv_obj_t *parent, struct mm_hid_contr
 
             free(btn);
         }
-
-        /* we use 1 timer for all buttons */
-        c->repeat_timer = NULL;
-        c->act_kb.type = -1;
-        c->act_m.type = -1;
-        c->act_c.type = -1;
 
     } else if(conf->type == MM_HID_CONTROL_TOUCHPAD) {
         lv_obj_set_style_layout(c_obj, LV_LAYOUT_FLEX, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -417,10 +486,6 @@ lv_obj_t *mm_widget_hidactions_control_add(lv_obj_t *parent, struct mm_hid_contr
         lv_obj_set_style_flex_grow(obj, 1, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_label_set_text_static(obj, "Open Touchpad");
 
-        c->act_kb.type = -1;
-        c->act_m.type = -1;
-        c->act_c.type = -1;
-
     } else {
         MM_LOG_W("Wrong HID control type");
     }
@@ -435,7 +500,7 @@ void mm_widget_hidactions_control_delete(lv_obj_t *obj, int index)
 
     for(int i = 0; i < lv_obj_get_child_cnt(obj); ++i) {
         child = lv_obj_get_child(obj, i);
-        child_index = lv_obj_has_class(child, &mm_hidactions_control_class) ? ((mm_widget_hidactions_control_t *) child)->conf.index : 0;
+        child_index = lv_obj_has_class(child, &mm_hidactions_control_class) ? ((mm_widget_hidactions_control_t *) child)->conf->index : 0;
 
         if(index == child_index) {
             lv_obj_del(child);

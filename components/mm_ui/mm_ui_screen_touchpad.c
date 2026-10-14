@@ -17,11 +17,12 @@
 #include "mm_err.h"
 #include "mm_event.h"
 #include "mm_hid_control.h"
+#include "mm_hid_scheduler.h"
 #include "mm_port_ui_customization.h"
 #include "mm_style.h"
 #include "mm_font.h"
 #include "mm_widgets.h"
-#include "mm_touchpad.h"
+#include "mm_hid_touchpad.h"
 #include "mm_ui_tile.h"
 
 #define MOUSE_PANEL_HEIGHT LV_PCT(20)
@@ -30,14 +31,15 @@
 
 static lv_indev_t *s_indev = NULL;
 static int s_fsm_running = 0;
-static struct mm_hid_action_s a;
 static mm_touchpad_t s_touchpad;
+static struct timespec s_last_triggered = {0,0};
 
 static void __screen_loaded(lv_event_t *e)
 {
     const struct mm_hid_control_config_s *conf = mm_widget_hidaction_last_touchpad_config();
     s_touchpad.sensitivity_x = conf->u.touchpad.sensitivity_x;
     s_touchpad.sensitivity_y = conf->u.touchpad.sensitivity_y;
+    MM_LOG_D("Touchpad inited FSM");
     mm_touchpad_init(&s_touchpad);
 }
 
@@ -46,69 +48,60 @@ static void __background_pressing_handler(mm_event_t id, void *data)
     lv_point_t point;
     int32_t x, y;
     struct timespec now, dt;
-    static struct timespec last_triggered = {0,0};
     mm_touchpad_event_t out;
+
+    if(mm_hid_scheduler_in_queue() > 0) {
+        /* to keep the queue stable */
+        return;
+    }
 
     clock_gettime(CLOCK_MONOTONIC, &now);
     lv_indev_get_point(s_indev, &point);
-    TIMESPEC_DIFF(&dt, &now, &last_triggered);
+    TIMESPEC_DIFF(&dt, &now, &s_last_triggered);
+
+    if(TIMESPEC_TO_MS(&dt) < 1) {
+        /* don't need to run that fast and it would be imprecise in the touchpad FSM */
+        return;
+    }
 
     /* determine key press/release */
 
     out = mm_touchpad_fsm_tick(&s_touchpad, TIMESPEC_TO_MS(&dt), point.x, point.y);
 
     if(out & MM_TP_LEFT_CLICK_DOWN) {
-        a.u.mouse_report.buttons |= MM_KEY_TO_VALUE(MM_KEY_MOUSE_LEFT);
+        mm_hid_scheduler_queue_raw(MM_KEY_MOUSE_LEFT, 1, 0);
     }
     if(out & MM_TP_RIGHT_CLICK_DOWN) {
-        a.u.mouse_report.buttons |= MM_KEY_TO_VALUE(MM_KEY_MOUSE_RIGHT);
+        mm_hid_scheduler_queue_raw(MM_KEY_MOUSE_RIGHT, 1, 0);
     }
     if(out & MM_TP_LEFT_CLICK_UP) {
-        a.u.mouse_report.buttons &= ~MM_KEY_TO_VALUE(MM_KEY_MOUSE_LEFT);
+        mm_hid_scheduler_queue_raw(MM_KEY_MOUSE_LEFT, 0, 0);
     }
     if(out & MM_TP_RIGHT_CLICK_UP) {
-        a.u.mouse_report.buttons &= ~MM_KEY_TO_VALUE(MM_KEY_MOUSE_RIGHT);
+        mm_hid_scheduler_queue_raw(MM_KEY_MOUSE_RIGHT, 0, 0);
     }
 
     /* compute mouse pointer shift */
 
     mm_touchpad_mouse_delta_acceleration(&s_touchpad, TIMESPEC_TO_MS(&dt), point.x, point.y, &x, &y);
 
-    a.type = MM_HID_ACTION_MOUSE;
-    a.u.mouse_report.x = 0;
-    a.u.mouse_report.y = 0;
-    do {
-        if(x < -127) {
-            a.u.mouse_report.x = -127;
-            x += 127;
-        } else if(x > 127) {
-            a.u.mouse_report.x = 127;
-            x -= 127;
-        } else {
-            a.u.mouse_report.x = x;
-            x = 0;
-        }
-        if(y < -127) {
-            a.u.mouse_report.y = -127;
-            y += 127;
-        } else if(y > 127) {
-            a.u.mouse_report.y = 127;
-            y -= 127;
-        } else {
-            a.u.mouse_report.y = y;
-            y = 0;
-        }
+    if(x) {
+        mm_hid_scheduler_queue_raw(MM_KEY_MOUSE_DELTA_X, 1, x);
+    }
 
-        mm_event_queue_sendhid(&a);
-    } while(x || y);
+    if(y) {
+        mm_hid_scheduler_queue_raw(MM_KEY_MOUSE_DELTA_Y, 1, y);
+    }
 
     if(mm_touchpad_get_state(&s_touchpad) == MM_TP_IDLE) {
+        MM_LOG_D("Touchpad pausing background handler");
         mm_event_delete_handler(MM_EVENT_BACKGROUND, __background_pressing_handler);
         /* restore indev polling rate */
         lv_timer_set_period(s_indev->driver->read_timer, CONFIG_LV_DISP_DEF_REFR_PERIOD);
         s_fsm_running = 0;
     }
-    last_triggered = now;
+
+    s_last_triggered = now;
 }
 
 static void __screen_start_touching(lv_event_t *e)
@@ -116,11 +109,13 @@ static void __screen_start_touching(lv_event_t *e)
     lv_point_t point;
     s_indev = lv_event_get_indev(e);
     lv_indev_get_point(s_indev, &point);
+    MM_LOG_D("Touchpad start touching");
     mm_touchpad_touch_down(&s_touchpad, point.x, point.y);
     /* note: we don't use the LV_EVENT_PRESSING because it is too
        slow and would make the mouse cursor lag */
     if(!s_fsm_running) {
-        memset(&a, 0, sizeof(struct mm_hid_action_s));
+        clock_gettime(CLOCK_MONOTONIC, &s_last_triggered);
+        MM_LOG_D("Touchpad added background handler");
         mm_event_add_handler(MM_EVENT_BACKGROUND, __background_pressing_handler);
         /* make the indev faster to reduce lag */
         lv_timer_set_period(s_indev->driver->read_timer, CONFIG_MM_EVENT_TASK_PERIOD_MS);
@@ -130,6 +125,7 @@ static void __screen_start_touching(lv_event_t *e)
 
 static void __screen_stop_touching(lv_event_t *e)
 {
+    MM_LOG_D("Touchpad stop touching");
     mm_touchpad_touch_up(&s_touchpad);
 }
 

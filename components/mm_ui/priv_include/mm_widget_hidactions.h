@@ -40,12 +40,10 @@ void mm_widget_hidactions_delete(lv_obj_t *widget);
 
 struct mm_widget_hidactions_control_s {
     lv_obj_t panel;
-    lv_timer_t *repeat_timer;
-    uint32_t pressed;
-    struct mm_hid_control_config_s conf;
-    struct mm_hid_action_s act_m;
-    struct mm_hid_action_s act_kb;
-    struct mm_hid_action_s act_c;
+    uint32_t cur_id;
+    int key_down;
+    uint32_t last_pressed;
+    struct mm_hid_control_config_s *conf;
 };
 
 typedef struct mm_widget_hidactions_control_s mm_widget_hidactions_control_t;

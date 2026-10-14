@@ -102,7 +102,7 @@ menu "Minimonitor"
 
         config MM_HID_CONTROL_MATRIX_MAX_BTN
             int "Maximum buttons in HID matrix widget"
-            default 4
+            default 8
             help
                 The maximum number of buttons supported in the HID matrix widget.
 
@@ -121,11 +121,25 @@ menu "Minimonitor"
             help
                 The default press duration in milliseconds for a button press.
 
-        config MM_MAX_ICON_NAME_LEN
-            int "Maximum icon name length" if MM_EXPERT
-            default 24
+        config MM_HID_MOUSE_XY_SPLIT_BATCH_MS
+            int "Preferred delay between mouse reports (ms)"
+            default 20
             help
-                The maximum string length allowed for icon names (including the null terminator).
+                Increase to make mouse movements smoother, at the cost of additional resources.
+
+        config MM_HID_MOUSE_XY_SPLIT_THRESHOLD_MS
+            int "Threshold for splitting a mouse movement into smaller steps. (ms)"
+            default 40
+            help
+                If the macro duration is smaller than this value, the mouse gesture is immediate.
+                It is recommended to keep this value larger than the default press duration.
+
+        config MM_HID_MOUSE_XY_SPLIT_SIZE_MIN
+            int "Mouse report split threshold."
+            default 2
+            help
+                Don't split a mouse movement into steps smaller than this size. Can make the cursor feel laggy but
+                saves some resources.
 
         menu "Touchpad"
 

@@ -17,6 +17,8 @@
 #include "minimonitor.h"
 #include "mm_conf.h"
 #include "mm_sensor.h"
+#include "mm_hid_macro.h"
+#include "mm_hid_scheduler.h"
 #include "mm_macros.h"
 #include "mm_icon.h"
 #include "mm_event.h"
@@ -256,8 +258,10 @@ static int __sensorconfig_cmd(int argc, char **argv)
 
 #endif
 
-/* ================= hidconfig cmd ================= */
 #if CONFIG_MM_IO_ENABLE_USB_HID
+
+/* ================= hidconfig cmd ================= */
+#if 1
 
 static struct {
     struct arg_str *subcmd;
@@ -266,21 +270,19 @@ static struct {
 
 static struct {
     struct arg_int *index;
-    struct arg_str *keys;
+    struct arg_str *macro;
     struct arg_str *icon;
     struct arg_lit *once;
     struct arg_lit *toggle;
+    struct arg_lit *hold;
     struct arg_int *period;
-    struct arg_int *duration;
     struct arg_int *jitter;
-    struct arg_int *intensity;
     struct arg_end *end;
 } __hidconfig_autoclick_opt;
 
 static struct {
     struct arg_int *index;
-    struct arg_int *intensity;
-    struct arg_str *keys;
+    struct arg_str *macro;
     struct arg_str *icon;
     struct arg_end *end;
 } __hidconfig_matrix_opt;
@@ -308,14 +310,13 @@ static inline esp_err_t __register_hidconfig(void)
     __hidconfig_opt.end    = arg_end(0);
 
     __hidconfig_autoclick_opt.index     = arg_intn(NULL, NULL, "<index>", 1, 1, "Index of the control");
-    __hidconfig_autoclick_opt.keys      = arg_strn(NULL, NULL, "<keys>", 1, 1,"Key string");
+    __hidconfig_autoclick_opt.macro     = arg_strn(NULL, NULL, "<macro>", 1, 1,"Key string");
     __hidconfig_autoclick_opt.icon      = arg_strn("i", "icon", "<name>", 0, 1, "Icon name");
     __hidconfig_autoclick_opt.once      = arg_litn("1", "once", 0, 1, "Single click mode");
     __hidconfig_autoclick_opt.toggle    = arg_litn("T", "toggle", 0, 1, "Toggle press/release mode");
-    __hidconfig_autoclick_opt.period    = arg_intn("P", "period", "<ms>", 0, 1, "Autoclick period (ms)");
-    __hidconfig_autoclick_opt.duration  = arg_intn("d", "duration","<ms>", 0, 1, "Press duration (ms)");
+    __hidconfig_autoclick_opt.hold      = arg_litn("H", "hold", 0, 1, "Hold mode");
+    __hidconfig_autoclick_opt.period    = arg_intn("p", "period", "<ms>", 0, 1, "Period jitter (ms)");
     __hidconfig_autoclick_opt.jitter    = arg_intn("j", "jitter", "<ms>", 0, 1, "Max period jitter (ms)");
-    __hidconfig_autoclick_opt.intensity = arg_intn("n", "intensity","<val>", 0, 1, "Intensity");
     __hidconfig_autoclick_opt.end       = arg_end(0);
 
     __hidconfig_touchpad_opt.index  = arg_intn(NULL, NULL, "<index>", 1, 1, "Index of the control");
@@ -324,8 +325,7 @@ static inline esp_err_t __register_hidconfig(void)
     __hidconfig_touchpad_opt.end    = arg_end(0);
 
     __hidconfig_matrix_opt.index     = arg_intn(NULL, NULL, "<index>", 1, 1, "Index of the control");
-    __hidconfig_matrix_opt.intensity = arg_intn("n", "intensity","<val>", 0, 1, "Intensity");
-    __hidconfig_matrix_opt.keys      = arg_strn(NULL, NULL, "<keys ...>", 1, CONFIG_MM_HID_CONTROL_MATRIX_MAX_BTN, "Key string(s)");
+    __hidconfig_matrix_opt.macro     = arg_strn(NULL, NULL, "<macro ...>", 1, CONFIG_MM_HID_CONTROL_MATRIX_MAX_BTN, "Key string(s)");
     __hidconfig_matrix_opt.icon      = arg_strn("i", "icon", "<name>", 0, CONFIG_MM_HID_CONTROL_MATRIX_MAX_BTN, "Icon name(s)");
     __hidconfig_matrix_opt.end       = arg_end(0);
 
@@ -359,31 +359,29 @@ static inline int __hidconfig_autoclick_cmd(int argc, char **argv)
     }
 
     ret = 0;
-    if(__hidconfig_autoclick_opt.keys->count > 0) {
-        ret = mm_hid_control_fullname_to_key_arr(confhid_param.u.autoclicker.keys, CONFIG_MM_HID_MAX_NKRO,
-                __hidconfig_autoclick_opt.keys->sval[0]);
-    }
-
-    if(ret <= 0) {
-        fprintf(stderr, "Could not parse key string\n");
+    if(__hidconfig_autoclick_opt.macro->count > 0) {
+        if(mm_hid_macro_test(__hidconfig_autoclick_opt.macro->sval[0])) {
+            confhid_param.u.autoclicker.macro = strdup(__hidconfig_autoclick_opt.macro->sval[0]);
+            MM_CHECK_MALLOC_E(confhid_param.u.autoclicker.macro);
+        } else {
+            fprintf(stderr, "Could not parse macro \"%s\".\n", __hidconfig_autoclick_opt.macro->sval[0]);
+            return 1;
+        }
+    } else {
+        fprintf(stderr, "Please specify a macro.\n");
         return 1;
     }
 
     /* icon name */
     if(__hidconfig_autoclick_opt.icon->count > 0) {
-        strncpy(confhid_param.u.autoclicker.icon, __hidconfig_autoclick_opt.icon->sval[0], sizeof(confhid_param.u.autoclicker.icon));
-    }
-    /* duration */
-    if(__hidconfig_autoclick_opt.duration->count > 0) {
-        confhid_param.u.autoclicker.duration_ms = __hidconfig_autoclick_opt.duration->ival[0];
+        confhid_param.u.autoclicker.icon = strdup(__hidconfig_autoclick_opt.icon->sval[0]);
+        MM_CHECK_MALLOC_E(confhid_param.u.autoclicker.icon);
+    } else {
+        confhid_param.u.autoclicker.icon = NULL;
     }
     /* period */
     if(__hidconfig_autoclick_opt.period->count > 0) {
         confhid_param.u.autoclicker.period_ms = __hidconfig_autoclick_opt.period->ival[0];
-    }
-    /* intensity */
-    if(__hidconfig_autoclick_opt.intensity->count > 0) {
-        confhid_param.u.autoclicker.intensity = __hidconfig_autoclick_opt.intensity->ival[0];
     }
     /* jitter */
     if(__hidconfig_autoclick_opt.jitter->count > 0) {
@@ -391,17 +389,23 @@ static inline int __hidconfig_autoclick_cmd(int argc, char **argv)
     }
     /* once */
     if(__hidconfig_autoclick_opt.toggle->count > 0) {
-        confhid_param.u.autoclicker.duration_ms = 0;
+        confhid_param.u.autoclicker.press_bhv = MM_HID_PRESS_TOGGLE;
     }
     /* toggle */
     if(__hidconfig_autoclick_opt.once->count > 0) {
-        confhid_param.u.autoclicker.period_ms = 0;
-        if(confhid_param.u.autoclicker.duration_ms == 0) {
-            confhid_param.u.autoclicker.duration_ms = 1;
-        }
+        confhid_param.u.autoclicker.press_bhv = MM_HID_PRESS_ONCE;
+    }
+    /* hold */
+    if(__hidconfig_autoclick_opt.hold->count > 0) {
+        confhid_param.u.autoclicker.press_bhv = MM_HID_PRESS_HOLD;
     }
 
     mm_confhid(&confhid_param);
+
+    if(confhid_param.u.autoclicker.icon) {
+        free(confhid_param.u.autoclicker.icon);
+    }
+    free(confhid_param.u.autoclicker.macro);
 
     return 0;
 }
@@ -409,6 +413,8 @@ static inline int __hidconfig_autoclick_cmd(int argc, char **argv)
 static inline int __hidconfig_matrix_cmd(int argc, char **argv)
 {
     int ret;
+    int count;
+    char **macro_v = NULL, **icon_v = NULL;
 
     if(argc < 3) {
         __print_usage(stderr, "Usage:", "hidconfig matrix", &__hidconfig_matrix_opt);
@@ -430,25 +436,58 @@ static inline int __hidconfig_matrix_cmd(int argc, char **argv)
         return 1;
     }
 
-    if(__hidconfig_matrix_opt.intensity->count > 0) {
-        confhid_param.u.matrix.intensity = __hidconfig_matrix_opt.intensity->ival[0];
+    count = __hidconfig_matrix_opt.macro->count;
+    confhid_param.u.matrix.n_buttons = count;
+
+    if(count <= 0) {
+        fprintf(stderr, "Specify at least one button");
+        return 1;
     }
 
-    for(int i = 0; i < CONFIG_MM_HID_CONTROL_MATRIX_MAX_BTN; ++i) {
-        if(i < __hidconfig_matrix_opt.keys->count) {
-            ret = mm_hid_control_fullname_to_key_arr(confhid_param.u.matrix.keys[i], CONFIG_MM_HID_MAX_NKRO,
-                    __hidconfig_matrix_opt.keys->sval[i]);
-            if(ret <= 0) {
-                fprintf(stderr, "Could not parse key string\n");
-                return 1;
-            }
+    macro_v = calloc(count, sizeof(char*));
+    MM_CHECK_MALLOC_E(macro_v);
+    icon_v = calloc(count, sizeof(char*));
+    MM_CHECK_MALLOC_E(icon_v);
+
+    confhid_param.u.matrix.macro_v = macro_v;
+    confhid_param.u.matrix.icon_v = icon_v;
+
+    for(int i = 0; i < count; ++i) {
+
+        if(mm_hid_macro_test(__hidconfig_matrix_opt.macro->sval[i])) {
+            macro_v[i] = strdup(__hidconfig_matrix_opt.macro->sval[i]);
+            MM_CHECK_MALLOC_E(macro_v[i]);
+        } else {
+            fprintf(stderr, "Could not parse macro \"%s\".\n", __hidconfig_matrix_opt.macro->sval[i]);
+            /* TODO: just handle this better */
+            macro_v[i] = strdup("A");
+            MM_CHECK_MALLOC_E(macro_v[i]);
         }
+
         if(i < __hidconfig_matrix_opt.icon->count) {
-            strcpy(&confhid_param.u.matrix.icons[i][0], __hidconfig_matrix_opt.icon->sval[i]);
+            icon_v[i] = strdup(__hidconfig_matrix_opt.icon->sval[i]);
+            MM_CHECK_MALLOC_E(icon_v[i]);
+        } else {
+            icon_v[i] = NULL;
         }
     }
 
     mm_confhid(&confhid_param);
+
+    for(int i = 0; i < count; ++i) {
+        if(macro_v[i]) {
+            free(macro_v[i]);
+        }
+        if(icon_v[i]) {
+            free(icon_v[i]);
+        }
+    }
+    if(icon_v) {
+        free(icon_v);
+    }
+    if(macro_v) {
+        free(macro_v);
+    }
 
     return 0;
 }
@@ -565,6 +604,64 @@ static int __hidconfig_cmd(int argc, char **argv)
 }
 
 #endif
+
+/* ================= hidrun cmd ================= */
+#if 1
+
+static struct {
+    struct arg_str *macro;
+    struct arg_end *end;
+} __hidrun_opt;
+
+static int __hidrun_cmd(int argc, char **argv);
+
+static inline esp_err_t __register_hidrun(void)
+{
+    esp_console_cmd_t hidrun_cmd_config = {
+        .command = "hidrun",
+        .help = "Run HID macro",
+        .hint = NULL,
+        .func = &__hidrun_cmd,
+        .argtable = &__hidrun_opt,
+    };
+
+    __hidrun_opt.macro =  arg_strn(NULL, NULL, "<macro>", 1, 1, "Macro to run");
+    __hidrun_opt.end = arg_end(0);
+
+    return esp_console_cmd_register(&hidrun_cmd_config);
+}
+
+static int __hidrun_cmd(int argc, char **argv)
+{
+    int ret;
+    const char *macro;
+
+    ret = arg_parse(argc, argv, (void **) &__hidrun_opt);
+    if(ret != 0) {
+        arg_print_errors(stderr, __hidrun_opt.end, argv[0]);
+        return 1;
+    }
+
+    if(__hidrun_opt.macro->count > 0) {
+        macro = __hidrun_opt.macro->sval[0];
+    } else {
+        __print_usage(stderr, "Usage:", argv[0], &__hidrun_opt);
+        return 1;
+    }
+
+    if(mm_hid_macro_test(macro)) {
+        mm_hid_scheduler_queue_macro(macro);
+    } else {
+        fprintf(stderr, "Could not parse macro \"%s\".\n", macro);
+        return 1;
+    }
+
+    return 0;
+}
+
+#endif
+
+#endif /* CONFIG_MM_IO_ENABLE_USB_HID */
 
 /* ================= setwifi cmd ================= */
 #if 1
@@ -1566,6 +1663,7 @@ void mm_cli_cmd_register_all(void)
     #if CONFIG_MM_IO_ENABLE_USB_HID
     if(mm_conf_get_as_integer(MM_CONF_DISABLE_TUSB) == 0) {
         MM_CHECK_E(__register_hidconfig() == ESP_OK);
+        MM_CHECK_E(__register_hidrun() == ESP_OK);
     }
     #endif
     MM_CHECK_E(__register_info() == ESP_OK);

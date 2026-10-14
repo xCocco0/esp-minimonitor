@@ -34,7 +34,7 @@
  * ```
  */
 
-#include "mm_touchpad.h"
+#include "mm_hid_touchpad.h"
 
 #include "mm_macros.h"
 #include "mm_log.h"

@@ -22,6 +22,7 @@
 #include "mm_sensor.h"
 #include "mm_err.h"
 #include "mm_macros.h"
+#include "mm_hid_control.h"
 
 struct mm_event_handler_node {
     mm_list_node_t node;
@@ -501,35 +502,16 @@ static void __mm_event_cleanup_motion(void *data)
 
 void mm_event_queue_confhid(struct mm_hid_control_config_s *param)
 {
-    struct mm_hid_control_config_s *data = (struct mm_hid_control_config_s *) malloc(sizeof(struct mm_hid_control_config_s));
-    MM_CHECK_MALLOC_E(data);
+    struct mm_hid_control_config_s *data;
 
-    memcpy(data, param, sizeof(struct mm_hid_control_config_s));
+    data = mm_hid_control_config_deepcopy(param);
+
     mm_event_queue(MM_EVENT_CONFHID, (void *) data);
 }
 
 static void __mm_event_cleanup_confhid(void *data)
 {
-    free(data);
-}
-
-/* --- MM_EVENT_SENDHID --- */
-
-/**
- * @brief Queue event to send HID report
- */
-void mm_event_queue_sendhid(struct mm_hid_action_s *param)
-{
-    struct mm_hid_action_s *data = (struct mm_hid_action_s *) malloc(sizeof(struct mm_hid_action_s));
-    MM_CHECK_MALLOC_E(data);
-
-    memcpy(data, param, sizeof(struct mm_hid_action_s));
-    mm_event_queue(MM_EVENT_SENDHID, (void *) data);
-}
-
-static void __mm_event_cleanup_sendhid(void *data)
-{
-    free(data);
+    mm_hid_control_config_deepfree(data);
 }
 
 /* --- MM_EVENT_DATA_REQUEST/REPLY --- */
@@ -586,7 +568,6 @@ static void __mm_event_cleanup(mm_event_t id, void *data)
         case MM_EVENT_BSOD:            __mm_event_cleanup_bsod(data);            break;
         case MM_EVENT_MOTION:          __mm_event_cleanup_motion(data);          break;
         case MM_EVENT_CONFHID:         __mm_event_cleanup_confhid(data);         break;
-        case MM_EVENT_SENDHID:         __mm_event_cleanup_sendhid(data);         break;
         case MM_EVENT_DATA_REQUEST:    __mm_event_cleanup_data_request(data);    break;
         default: break; /* default also covers EVENT_PERIODIC and EVENT_STARTUP */
     }

@@ -26,15 +26,30 @@
 #include "esp_mac.h"
 #include "esp_private/usb_phy.h"
 #include "mm_log.h"
+#include "mm_macros.h"
 #include "mm_err.h"
 #include "mm_port.h"
 #include "mm_event.h"
 #include "vfs_tinyusb.h"
 #include "mm_usb_descriptors.h"
+#include "mm_io_usb_hid.h"
+
+/* to compute the average delay for sending a report */
+#define __DEBUG_IO_DELAY 0
+
+#if __DEBUG_IO_DELAY
+#include "time.h"
+#endif
 
 static usb_phy_handle_t jtag_phy = NULL;
 static tinyusb_msc_storage_handle_t msc_handle;
 static SemaphoreHandle_t s_send_report_sema = NULL;
+#if __DEBUG_IO_DELAY
+#define __SMA_WINDOW 50
+static struct timespec s_sent_time;
+static uint32_t s_avg_delay_us = 0, s_sma_delay_us = 0, s_min_delay_us = UINT32_MAX, s_max_delay_us = 0;
+static uint32_t s_total_sent = 0;
+#endif
 
 #if CONFIG_MM_IO_ENABLE_USB_HID
 
@@ -58,7 +73,28 @@ uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance)
 
 void tud_hid_report_complete_cb(uint8_t instance, uint8_t const* report, uint16_t len)
 {
+    #if __DEBUG_IO_DELAY
+    struct timespec complete_time;
+    uint32_t elapsed;
+
+    clock_gettime(CLOCK_MONOTONIC, &complete_time);
+    TIMESPEC_DIFF(&complete_time, &complete_time, &s_sent_time);
+    elapsed = TIMESPEC_TO_US(&complete_time);
+    s_avg_delay_us = (s_avg_delay_us*s_total_sent + elapsed)/(s_total_sent + 1);
+    s_sma_delay_us = (s_sma_delay_us*__SMA_WINDOW + elapsed)/(__SMA_WINDOW + 1);
+    s_min_delay_us = MIN(s_min_delay_us, elapsed);
+    s_max_delay_us = MAX(s_max_delay_us, elapsed);
+    s_total_sent++;
+    #endif
+
     xSemaphoreGive(s_send_report_sema);
+
+    #if __DEBUG_IO_DELAY
+    if((s_total_sent % 500) == 0) {
+        MM_LOG_I("HID report send delay: avg=%"PRIu32", avg"STR(__SMA_WINDOW)"=%"PRIu32" ,min=%"PRIu32", max=%"PRIu32"",
+                s_avg_delay_us, s_sma_delay_us, s_min_delay_us, s_max_delay_us);
+    }
+    #endif
 }
 
 void tud_hid_report_failed_cb(uint8_t instance, hid_report_type_t report_type, uint8_t const* report, uint16_t xferred_bytes)
@@ -67,85 +103,49 @@ void tud_hid_report_failed_cb(uint8_t instance, hid_report_type_t report_type, u
     xSemaphoreGive(s_send_report_sema);
 }
 
-static mm_err_t __send_report_consumer(uint16_t control)
+static void __prepare_send_report(void)
 {
     BaseType_t ret;
 
     ret = xSemaphoreTake(s_send_report_sema, pdMS_TO_TICKS(CONFIG_MM_IO_TUSB_SEND_TIMEOUT_MS));
 
+    #if __DEBUG_IO_DELAY
+    clock_gettime(CLOCK_MONOTONIC, &s_sent_time);
+    #endif
+
     /* note: just warn user */
     MM_CHECK_W(ret == pdTRUE);
+}
+
+mm_err_t mm_usb_send_report_consumer(uint16_t control)
+{
+    __prepare_send_report();
 
     return tud_hid_report(REPORT_ID_CONSUMER, &control, sizeof(control)) ? MM_OK : MM_FAIL;
 }
 
-static mm_err_t __send_report_keyboard(uint8_t modifier, const uint8_t keycode[6])
+mm_err_t mm_usb_send_report_keyboard(uint8_t modifier, const uint8_t keycode[6])
 {
-    BaseType_t ret;
-
-    ret = xSemaphoreTake(s_send_report_sema, pdMS_TO_TICKS(CONFIG_MM_IO_TUSB_SEND_TIMEOUT_MS));
-
-    /* note: just warn user */
-    MM_CHECK_W(ret == pdTRUE);
+    __prepare_send_report();
 
     return tud_hid_keyboard_report(REPORT_ID_KEYBOARD, modifier, keycode) ? MM_OK : MM_FAIL;
 }
 
-static mm_err_t __send_report_mouse(int is_absolute, uint8_t buttons, int16_t x, int16_t y, int8_t wheel, int8_t pad)
+mm_err_t mm_usb_send_report_mouse(int is_absolute, uint8_t buttons, int16_t x, int16_t y, int16_t wheel, int16_t pad)
 {
-    BaseType_t ret;
+    __prepare_send_report();
 
-    ret = xSemaphoreTake(s_send_report_sema, pdMS_TO_TICKS(CONFIG_MM_IO_TUSB_SEND_TIMEOUT_MS));
-
-    /* note: just warn user */
-    MM_CHECK_W(ret == pdTRUE);
+    wheel = CLAMP(wheel, -127, 127);
+    pad = CLAMP(pad, -127, 127);
 
     if(is_absolute) {
+        x = CLAMP(x, 0, 32767);
+        y = CLAMP(y, 0, 32767);
         return tud_hid_abs_mouse_report(REPORT_ID_MOUSE, buttons, x, y, wheel, pad) ? MM_OK : MM_FAIL;
     } else {
+        x = CLAMP(x, -127, 127);
+        y = CLAMP(y, -127, 127);
         return tud_hid_mouse_report(REPORT_ID_MOUSE, buttons, (int8_t) x, (int8_t) y, wheel, pad) ? MM_OK : MM_FAIL;
-    }
-}
-
-static void __send_report_handler(mm_event_t id, void *data)
-{
-    struct mm_hid_action_s *param = (struct mm_hid_action_s *) data;
-    static uint8_t sent_report[MM_HID_ACTIONS_N] = {};
-
-    sent_report[param->type] = 1;
-
-    if(param->type == MM_HID_ACTION_RELEASE) {
-        /* release pressed keys */
-        if(sent_report[MM_HID_ACTION_MOUSE]) {
-            __send_report_mouse(0, 0, 0, 0, 0, 0);
-            sent_report[MM_HID_ACTION_MOUSE] = 0;
-        }
-        if(sent_report[MM_HID_ACTION_KEYBOARD]) {
-            __send_report_keyboard(0, NULL);
-            sent_report[MM_HID_ACTION_KEYBOARD] = 0;
-        }
-        if(sent_report[MM_HID_ACTION_CONSUMER]) {
-            __send_report_consumer(0);
-            sent_report[MM_HID_ACTION_CONSUMER] = 0;
-        }
-    } else if(param->type == MM_HID_ACTION_MOUSE) {
-        /* send a mouse event */
-        __send_report_mouse(param->u.mouse_report.is_absolute, param->u.mouse_report.buttons,
-                param->u.mouse_report.x, param->u.mouse_report.y,
-                param->u.mouse_report.wheel, param->u.mouse_report.pad);
-
-
-    } else if(param->type == MM_HID_ACTION_KEYBOARD) {
-        /* send a keyboard event */
-        __send_report_keyboard(param->u.keyboard_report.modifiers, param->u.keyboard_report.keycode);
-
-    } else if(param->type == MM_HID_ACTION_CONSUMER) {
-        /* send a keyboard event */
-        __send_report_consumer(param->u.consumer_report.control);
-
-
-    } else {
-        MM_LOG_W("Could not parse struct mm_hid_action_s");
     }
 }
 
@@ -279,7 +279,7 @@ void mm_io_usb_init(void)
     /* semaphore starts unlocked */
     xSemaphoreGive(s_send_report_sema);
 
-    mm_event_add_handler(MM_EVENT_SENDHID, __send_report_handler);
+    mm_usb_hid_task_spawn();
 
     #endif
 
@@ -316,6 +316,8 @@ static void __suspend_tusb_task(void)
 void mm_io_usb_deinit(void)
 {
     ESP_LOGI(TAG, "deinit start");
+
+    mm_usb_hid_task_kill();
 
     redirect_streams_to_null();
 

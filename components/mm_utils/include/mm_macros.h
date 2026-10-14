@@ -65,6 +65,10 @@ extern "C"
 #define MULT_AND_DIV(a,b,div) (((b)/(div))*(a) + (((b)%(div))*(a))/(div))
 #endif
 
+#ifndef ROUND_DIV
+#define ROUND_DIV(n, d) (((n)/(d)) + ((n)%(d) >= (d)/2 ? 1 : 0))
+#endif
+
 #ifndef TIMESPEC_SUM
 #define TIMESPEC_SUM(result, a, b) do { \
     if (((a)->tv_nsec + (b)->tv_nsec) >= 1000000000L) { \
@@ -85,6 +89,25 @@ extern "C"
     } else { \
         (result)->tv_sec = (a)->tv_sec - (b)->tv_sec; \
         (result)->tv_nsec = (a)->tv_nsec - (b)->tv_nsec; \
+    } \
+} while(0)
+#endif
+
+#ifndef TIMESPEC_CMP
+#define TIMESPEC_CMP(a, b) \
+        (((a)->tv_sec < (b)->tv_sec) ? -1 : \
+        ((a)->tv_sec > (b)->tv_sec) ? 1 : \
+        ((a)->tv_nsec < (b)->tv_nsec) ? -1 : \
+        ((a)->tv_nsec > (b)->tv_nsec) ? 1 : 0)
+#endif
+
+#ifndef TIMESPEC_ADD_MS
+#define TIMESPEC_ADD_MS(result, a, ms) do { \
+    (result)->tv_sec  = (a)->tv_sec + (ms) / 1000; \
+    (result)->tv_nsec = (a)->tv_nsec + ((ms) % 1000) * 1000000L; \
+    if((result)->tv_nsec >= 1000000000L) { \
+        (result)->tv_sec  += 1; \
+        (result)->tv_nsec -= 1000000000L; \
     } \
 } while(0)
 #endif

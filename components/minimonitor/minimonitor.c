@@ -97,7 +97,8 @@ void mm_init(void)
     struct timeval tv;
     char *buf;
     struct mm_sensor_meter_config_s config;
-    struct mm_hid_control_config_s hidconf;
+    struct mm_hid_control_config_s *hidconf;
+    int index;
 
     MM_CHECK_E(s_initialized == 0);
     MM_CHECK_E(mm_conf_initialized());
@@ -132,10 +133,12 @@ void mm_init(void)
     /* restore hid controls */
     #if CONFIG_MM_IO_ENABLE_USB_HID && CONFIG_MM_PORT_HAS_TOUCHSCREEN
     if(mm_conf_get_as_integer(MM_CONF_DISABLE_TUSB) == 0) {
-        hidconf.index = 0;
-        while(mm_hid_control_fetch_config(&hidconf) == MM_OK) {
-            mm_event_queue_confhid(&hidconf);
-            hidconf.index++;
+        index = 0;
+        hidconf = mm_hid_control_config_fetch(0);
+        while(hidconf) {
+            index++;
+            mm_event_queue_confhid(hidconf);
+            hidconf = mm_hid_control_config_fetch(index);
         }
     }
     #endif
@@ -260,9 +263,9 @@ void mm_confhid(struct mm_hid_control_config_s *config)
     };
 
     if(config->type != MM_HID_CONTROL_INVALID) {
-        MM_CHECK_W(mm_hid_control_store_config(config) == MM_OK);
+        MM_CHECK_W(mm_hid_control_config_update(config) == MM_OK);
     } else {
-        mm_hid_control_erase_config(config->index);
+        mm_hid_control_config_erase(config->index);
     }
 
     MM_LOG_I("Setting HID config [%d]: %s", config->index,

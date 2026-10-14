@@ -14,6 +14,7 @@ idf_component_register(SRCS
                     "mm_io_ledstrip.c"
                     "mm_io_imu.c"
                     "mm_io_usb.c"
+                    "mm_io_usb_hid.c"
                     ${TINYUSB_SRC}
                     PRIV_REQUIRES minimonitor mm_utils mm_port esp_driver_usb_serial_jtag ${TINYUSB_REQ}
                     INCLUDE_DIRS "include"

@@ -266,13 +266,26 @@ menu "Minimonitor - Additional GPIO devices"
             help
                  Use the device as USB HID for keyboard/mouse emulation.
 
+            if MM_IO_ENABLE_USB_HID
+                config MM_IO_USB_HID_TASK_ADDITIONAL_STACK
+                    int "HID scheduler task additional stack size"
+                    default 2024
+                    help
+                        Additional stack space allocated to the HID scheduler task in bytes.
+
+                config MM_IO_USB_HID_TASK_PRIO
+                    int "HID scheduler task priority"
+                    default 3
+                    help
+                        The priority of the HID scheduler task. (recommended value: higher than mm_event task)
+            endif
+
             config MM_IO_TUSB_SEND_TIMEOUT_MS
                 int "Timeout for sending HID reports (ms)"
                 default 500
                 help
                     The maximum time to wait when sending an HID report.
 
-                 #define CONFIG_MM_IO_TUSB_SEND_TIMEOUT_MS 500
         endif
 
     endmenu
